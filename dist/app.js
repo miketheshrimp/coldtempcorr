@@ -15,7 +15,7 @@ const exampleRows = [
   ['FAF', 4200],
   ['Step-down Fix', 3500],
   ['MAP / DDA / MDA / DA', 2600],
-  ['Missed Approach Altitude', 4600],
+  ['GA ALT', 4600],
   ['Holding', 6000],
   ['MSA', 7000]
 ];
@@ -175,8 +175,11 @@ function correctionAt(temp, height) {
 
 function formatFt(value) { return `${Math.round(value).toLocaleString()} ft`; }
 function formatCorrectedAltitude(row, isMap = false) {
-  const increment = isMap || /\b(?:MAP|MDA|DDA|DA)\b/i.test(row.label) ? 10 : 100;
+  const increment = isMap || /\b(?:MAP|MDA|DDA|DA)\b/i.test(row.label) || /missed approach point/i.test(row.label) ? 10 : 100;
   return `${(Math.ceil(row.corrected / increment) * increment).toLocaleString()} ft`;
+}
+function displayPointLabel(label) {
+  return /missed approach altitude/i.test(label) ? 'GA ALT' : label;
 }
 
 function calculate() {
@@ -244,8 +247,7 @@ function renderResults(data) {
   $('indicatedVs').textContent = `${Math.round(data.indicatedVs)} fpm`;
   $('indicatedVsNote').textContent = `pressure-derived · ${((1 / data.layerScale - 1) * 100).toFixed(1)}% sensitivity`;
   $('samePathIndicatedVs').textContent = `${Math.round(data.samePathIndicatedVs)} fpm indicated`;
-  const finalPoints = [data.faf, data.map];
-  $('resultsBody').innerHTML = finalPoints.map((r, index) => `<tr><td>${index === 0 ? 'FAF' : 'MAP'}</td><td>${formatFt(r.altitude)}</td><td>+${Math.round(r.correction)} ft</td><td><strong>${formatCorrectedAltitude(r, index === 1)}</strong></td></tr>`).join('');
+  $('resultsBody').innerHTML = data.computed.map(r => `<tr><td>${escapeHtml(displayPointLabel(r.label))}</td><td>${formatFt(r.altitude)}</td><td>+${Math.round(r.correction)} ft</td><td><strong>${formatCorrectedAltitude(r)}</strong></td></tr>`).join('');
   const extrapolated = data.computed.some(r => r.height > 5000);
   $('methodNote').innerHTML = `<strong>Calculation note:</strong> Switched-off rows are excluded entirely from validation, calculations, output, and FAF–MAP analysis. Values are interpolated from the FAA/ICAO table and shown to the nearest foot. ${extrapolated ? 'One or more points exceed 5,000 ft AAE; those values use a linear extension of the final table interval, which the FAA permits as an optional extrapolation method. ' : ''}The VSI estimate uses a table-derived average FAF–MAP layer factor of ${data.layerScale.toFixed(4)}. Exact aircraft indication can differ because of the real temperature/virtual-temperature profile, static-system and ADC calibration, instrument lag, and local pressure structure. Operational guidance always takes precedence.`;
   $('chartNarrative').textContent = `From FAF to MAP at ${data.temp} degrees Celsius, the cold true descent gradient is ${(data.actualGradient*100).toFixed(2)} percent or ${data.actualAngle.toFixed(2)} degrees. At ${data.groundspeed} knots, standard vertical speed is ${Math.round(data.standardVs)} feet per minute, cold geometric vertical speed is ${Math.round(data.actualVs)} feet per minute, and the pressure-derived cockpit VSI indication is ${Math.round(data.indicatedVs)} feet per minute.`;
