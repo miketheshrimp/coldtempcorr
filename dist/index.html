@@ -130,15 +130,21 @@
             </div>
             <div class="table-scroll">
               <table>
-                <thead><tr><th>Point</th><th>Published</th><th>Correction</th><th>Altitude after correction</th></tr></thead>
+                <thead><tr><th>Point</th><th>Published</th><th>Correction</th><th>Result</th></tr></thead>
                 <tbody id="resultsBody"></tbody>
               </table>
             </div>
           </section>
 
+          <div class="vsi-explainer">
+            <span>Same physical 5.2% path in cold air</span>
+            <strong id="samePathIndicatedVs">—</strong>
+            <p>Estimated pressure-derived VSI indication if the aircraft maintained the full geometric 5.2% path instead of following the shallower uncompensated barometric path.</p>
+          </div>
+
           <div class="summary-grid">
             <article class="summary-card featured">
-              <span>Actual cold final gradient</span>
+              <span>Actual cold final angle</span>
               <strong id="actualGradient">—</strong>
               <small id="shallowerBy">—</small>
             </article>
@@ -157,12 +163,6 @@
               <strong id="actualVs">—</strong>
               <small id="actualVsNote">—</small>
             </article>
-          </div>
-
-          <div class="vsi-explainer">
-            <span>Same physical 5.2% path in cold air</span>
-            <strong id="samePathIndicatedVs">—</strong>
-            <p>Estimated pressure-derived VSI indication if the aircraft maintained the full geometric 5.2% path instead of following the shallower uncompensated barometric path.</p>
           </div>
 
           <section class="chart-card">
@@ -205,7 +205,7 @@
 
   <footer>
     <span>Cold Altitude Correction</span>
-    <span>Version 1.0.3 · Works offline after first successful load</span>
+    <span>Version 1.0.4 · Works offline after first successful load</span>
   </footer>
 
   <script src="app.js" defer></script>

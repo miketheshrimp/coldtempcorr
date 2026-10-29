@@ -235,7 +235,7 @@ function calculate() {
 function renderResults(data) {
   $('emptyState').hidden = true;
   $('results').hidden = false;
-  $('actualGradient').textContent = `${(data.actualGradient * 100).toFixed(2)}%`;
+  $('actualGradient').textContent = `${data.actualAngle.toFixed(2)}°`;
   $('shallowerBy').textContent = `${data.actualAngle.toFixed(2)}° · ${(data.standardAngle - data.actualAngle).toFixed(2)}° shallower`;
   $('standardVs').textContent = `${Math.round(data.standardVs)} fpm`;
   $('standardVsNote').textContent = `5.2% at ${Math.round(data.groundspeed)} kt`;
@@ -304,8 +304,8 @@ function drawChart(data) {
   const standardColor = dayTheme ? '#587000' : '#d8ff4f';
   const coldColor = dayTheme ? '#087fa8' : '#67d8ff';
   path(standardColor,false,[]); path(coldColor,true,[6,4]);
-  ctx.fillStyle=standardColor; ctx.textAlign='left'; ctx.fillText(`${(STANDARD_GRADIENT*100).toFixed(1)}% / ${data.standardAngle.toFixed(2)}° standard`,pad.l+8,pad.t+13);
-  ctx.fillStyle=coldColor; ctx.fillText(`${(data.actualGradient*100).toFixed(2)}% / ${data.actualAngle.toFixed(2)}° cold`,pad.l+8,pad.t+27);
+  ctx.fillStyle=standardColor; ctx.textAlign='right'; ctx.fillText(`${(STANDARD_GRADIENT*100).toFixed(1)}% / ${data.standardAngle.toFixed(2)}° standard`,w-pad.r-8,pad.t+13);
+  ctx.fillStyle=coldColor; ctx.textAlign='left'; ctx.fillText(`${(data.actualGradient*100).toFixed(2)}% / ${data.actualAngle.toFixed(2)}° cold`,pad.l+8,h-pad.b-8);
 }
 
 initialRows.forEach(([label, altitude]) => addAltitudeRow(label, altitude));
