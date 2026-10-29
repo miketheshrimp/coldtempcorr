@@ -119,4 +119,6 @@ Keep calculation changes separate from visual changes when practical. Any modifi
 
 ## License
 
-No open-source license has been added yet. The repository is publicly viewable, but that alone does not grant permission to reuse, modify, or redistribute the code. Add an explicit license before accepting broad third-party reuse or contributions.
+This project is released under the [MIT License](LICENSE). The license permits reuse, modification, and redistribution provided the copyright and license notices are retained.
+
+The calculator is provided for planning and educational use only. The MIT License does not replace the operational limitations and safety warnings in this README.
