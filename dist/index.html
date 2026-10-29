@@ -3,11 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#07141e">
+  <meta id="themeColor" name="theme-color" content="#07141e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
   <meta name="description" content="Offline cold-temperature altitude correction and descent-path calculator.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    try {
+      const savedTheme = localStorage.getItem('cold-altitude-theme');
+      document.documentElement.dataset.theme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day');
+    } catch { document.documentElement.dataset.theme = 'night'; }
+  </script>
   <title>Cold Altitude Correction</title>
 </head>
 <body>
@@ -21,6 +30,9 @@
     </a>
     <div class="status-cluster">
       <span class="eyebrow">FAA / ICAO TABLE METHOD</span>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to day theme">
+        <span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">Day</span>
+      </button>
       <span id="offlineStatus" class="status-pill"><i></i><span>Preparing offline use</span></span>
     </div>
   </header>
@@ -48,18 +60,26 @@
           <label class="field temperature-field">
             <span>Airport temperature</span>
             <div class="input-shell">
-              <input id="temperature" type="number" inputmode="decimal" min="-50" max="-1" step="1" value="-20" aria-describedby="tempHint">
+              <input id="temperature" type="number" inputmode="decimal" min="-50" max="-1" step="1" placeholder="—" aria-describedby="tempHint">
               <b>°C</b>
             </div>
-            <small id="tempHint">Enter −1°C to −50°C</small>
+            <small id="tempHint">Type 1–50; the minus sign is added automatically</small>
           </label>
           <label class="field">
             <span>Airport elevation</span>
             <div class="input-shell">
-              <input id="elevation" type="number" inputmode="numeric" min="-1500" max="15000" step="1" value="1200">
+              <input id="elevation" type="number" inputmode="numeric" min="-1500" max="15000" step="1" placeholder="—">
               <b>ft MSL</b>
             </div>
             <small>Elevation of altimeter source</small>
+          </label>
+          <label class="field">
+            <span>Groundspeed</span>
+            <div class="input-shell">
+              <input id="groundspeed" type="number" inputmode="decimal" min="1" max="600" step="1" placeholder="—">
+              <b>kt</b>
+            </div>
+            <small>FAF to MAP groundspeed</small>
           </label>
         </div>
 
@@ -70,9 +90,10 @@
           </div>
           <span class="count-label"><strong id="rowCount">8</strong> entries</span>
         </div>
+        <p class="segment-hint">Entering an altitude switches that fix on; clearing it switches the fix off. Hold <strong>⋮⋮</strong> and drag to reorder. Active FAF and MAP rows define the graph.</p>
 
         <div class="column-labels" aria-hidden="true">
-          <span>Label</span><span>Published altitude</span><span></span>
+          <span>Use</span><span>Label</span><span>Published altitude</span><span>Order</span><span></span>
         </div>
         <div id="altitudeRows" class="altitude-rows"></div>
         <button id="addRow" class="add-button" type="button"><span>＋</span> Add altitude</button>
@@ -90,39 +111,50 @@
             <span class="step">03</span>
             <h2>Corrected profile</h2>
           </div>
+          <span class="mobile-results-hint">Swipe results ↔</span>
           <button id="printResults" class="icon-button" type="button" title="Print or save as PDF" aria-label="Print or save results">↗</button>
         </div>
 
         <div id="emptyState" class="empty-state">
           <div class="radar" aria-hidden="true"><span></span></div>
           <h3>Ready for the cold.</h3>
-          <p>Enter your conditions and at least eight procedure altitudes to build the corrected profile.</p>
+          <p>Enter your conditions plus FAF and MAP altitudes to build the corrected final-segment profile.</p>
         </div>
 
         <div id="results" hidden>
           <div class="summary-grid">
             <article class="summary-card featured">
-              <span>Actual uncompensated path</span>
-              <strong id="actualAngle">—</strong>
+              <span>Actual cold final gradient</span>
+              <strong id="actualGradient">—</strong>
               <small id="shallowerBy">—</small>
             </article>
             <article class="summary-card">
-              <span>Largest correction</span>
-              <strong id="maxCorrection">—</strong>
-              <small id="maxCorrectionLabel">—</small>
+              <span>Standard vertical speed</span>
+              <strong id="standardVs">—</strong>
+              <small id="standardVsNote">—</small>
             </article>
             <article class="summary-card">
-              <span>Temperature</span>
-              <strong id="resultTemp">—</strong>
-              <small id="resultElevation">—</small>
+              <span>Cold geometric rate</span>
+              <strong id="actualVs">—</strong>
+              <small id="actualVsNote">—</small>
             </article>
+            <article class="summary-card">
+              <span>Cold cockpit VSI</span>
+              <strong id="indicatedVs">—</strong>
+              <small id="indicatedVsNote">—</small>
+            </article>
+          </div>
+          <div class="vsi-explainer">
+            <span>Same physical 5.2% path in cold air</span>
+            <strong id="samePathIndicatedVs">—</strong>
+            <p>Estimated pressure-derived VSI indication if the aircraft maintained the full geometric 5.2% path instead of following the shallower uncompensated barometric path.</p>
           </div>
 
           <section class="chart-card">
             <div class="chart-title">
               <div>
-                <h3>3° descent path comparison</h3>
-                <p>True height above airport vs. distance to threshold</p>
+                <h3>FAF → MAP descent comparison</h3>
+                <p>Standard 5.2% profile vs. cold true profile</p>
               </div>
               <div class="legend" aria-label="Chart legend">
                 <span><i class="standard"></i> ISA 3°</span>
@@ -158,8 +190,13 @@
       </div>
       <div class="method-copy">
         <p>The calculator bilinearly interpolates the FAA-published ICAO Cold Temperature Error Table using reported airport temperature and height above airport. Corrections are added to published altitudes; the altimeter setting itself is not changed.</p>
+        <p>The final descent comparison uses only rows labeled FAF and MAP. It derives the nominal distance from their published altitude difference at a 5.2% gradient, then compares that with their cold true-height difference.</p>
+        <p>A VSI is a pressure-rate instrument. For the displayed cold indication, the app converts geometric vertical speed back to barometric vertical speed using the FAF–MAP layer-thickness ratio from the same cold-correction table. This distinguishes the shallower true path from what the cockpit VSI indicates.</p>
         <p>FAA procedures, applicable state rules, operator policy, chart notes, and ATC instructions always take precedence. Coordinate corrections with ATC where required. Baro-VNAV temperature limits are separate.</p>
-        <a href="https://www.faa.gov/air_traffic/publications/atpubs/aim_html/chap7_section_3.html" target="_blank" rel="noreferrer">Open FAA AIM guidance ↗</a>
+        <div class="source-links">
+          <a href="https://www.faa.gov/air_traffic/publications/atpubs/aim_html/chap7_section_3.html" target="_blank" rel="noreferrer">FAA cold-temperature guidance ↗</a>
+          <a href="https://www.faa.gov/sites/faa.gov/files/2022-06/amt_airframe_hb_vol_2.pdf" target="_blank" rel="noreferrer">FAA VSI pressure-rate reference ↗</a>
+        </div>
       </div>
     </section>
   </main>

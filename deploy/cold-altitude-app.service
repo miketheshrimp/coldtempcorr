@@ -1,0 +1,21 @@
+[Unit]
+Description=Cold Altitude Correction web app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/cold-altitude-app
+ExecStart=/usr/bin/python3 -m http.server 49173 --bind 0.0.0.0 --directory /opt/cold-altitude-app
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/opt/cold-altitude-app
+
+[Install]
+WantedBy=multi-user.target

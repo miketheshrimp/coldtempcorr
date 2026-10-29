@@ -9,32 +9,136 @@ const TABLE = {
   '-50': [60,90,120,150,180,210,240,270,300,450,590,890,1190,1500]
 };
 const TEMPS = [-50, -40, -30, -20, -10, 0, 10];
-const initialRows = [
-  ['IAF', 6200], ['Intermediate', 5400], ['FAF', 4200], ['Step-down 1', 3500],
-  ['Step-down 2', 3000], ['MDA / DA', 2600], ['Missed approach', 4600], ['Holding', 6000]
+const exampleRows = [
+  ['IAF', 6200],
+  ['IF', 5400],
+  ['FAF', 4200],
+  ['Step-down Fix', 3500],
+  ['MAP / DDA / MDA / DA', 2600],
+  ['Missed Approach Altitude', 4600],
+  ['Holding', 6000],
+  ['MSA', 7000]
 ];
+const initialRows = exampleRows.map(([label]) => [label, '']);
+const STANDARD_GRADIENT = 0.052;
+const FEET_PER_MINUTE_PER_KNOT = 6076.12 / 60;
 
 const $ = (id) => document.getElementById(id);
 const rowsEl = $('altitudeRows');
 let lastResults = null;
 
-function addAltitudeRow(label = '', altitude = '') {
+function addAltitudeRow(label = '', altitude = '', active = String(altitude).trim() !== '') {
   const row = document.createElement('div');
   row.className = 'altitude-row';
   row.innerHTML = `
-    <input class="row-input label-input" type="text" maxlength="28" placeholder="e.g. FAF" value="${escapeHtml(String(label))}" aria-label="Altitude point label">
+    <label class="toggle-wrap"><input class="row-toggle" type="checkbox" ${active ? 'checked' : ''} aria-label="Include this fix in calculations"><span class="toggle-ui" aria-hidden="true"></span></label>
+    <input class="row-input label-input" type="text" maxlength="36" placeholder="e.g. FAF" value="${escapeHtml(String(label))}" aria-label="Altitude point label">
     <div class="altitude-wrap"><input class="row-input altitude-input" type="number" inputmode="numeric" step="1" placeholder="Altitude" value="${escapeHtml(String(altitude))}" aria-label="Published altitude in feet MSL"><span>FT</span></div>
+    <button class="drag-handle" type="button" aria-label="Hold and drag to reorder; use Option plus arrow keys on a keyboard">⋮⋮</button>
     <button class="remove-row" type="button" aria-label="Remove altitude">×</button>`;
+  const toggle = row.querySelector('.row-toggle');
+  const altitudeInput = row.querySelector('.altitude-input');
+  toggle.addEventListener('change', () => row.classList.toggle('is-disabled', !toggle.checked));
+  altitudeInput.addEventListener('input', () => {
+    toggle.checked = altitudeInput.value.trim() !== '';
+    row.classList.toggle('is-disabled', !toggle.checked);
+  });
+  row.classList.toggle('is-disabled', !toggle.checked);
+  setupRowReordering(row);
   row.querySelector('.remove-row').addEventListener('click', () => {
-    if (rowsEl.children.length <= 8) {
-      showValidation('Keep at least eight altitude entries.');
-      return;
-    }
     row.remove();
+    clearValidation();
     updateRowCount();
   });
   rowsEl.appendChild(row);
   updateRowCount();
+}
+
+function setupRowReordering(row) {
+  const handle = row.querySelector('.drag-handle');
+  let holdTimer = null;
+  let dragging = false;
+  let pointerId = null;
+  let pointerY = 0;
+  let grabOffsetY = 0;
+  let placeholder = null;
+
+  const movePlaceholder = clientY => {
+    const siblings = [...rowsEl.querySelectorAll('.altitude-row')].filter(item => item !== row);
+    const next = siblings.find(item => clientY < item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2);
+    rowsEl.insertBefore(placeholder, next || null);
+  };
+
+  const startDragging = () => {
+    const rect = row.getBoundingClientRect();
+    dragging = true;
+    grabOffsetY = Math.max(0, Math.min(rect.height, pointerY - rect.top));
+    placeholder = document.createElement('div');
+    placeholder.className = 'altitude-row-placeholder';
+    placeholder.style.height = `${rect.height}px`;
+    rowsEl.insertBefore(placeholder, row);
+    row.classList.add('dragging');
+    row.setAttribute('aria-grabbed', 'true');
+    Object.assign(row.style, {
+      position: 'fixed',
+      left: `${rect.left}px`,
+      top: `${pointerY - grabOffsetY}px`,
+      width: `${rect.width}px`,
+      zIndex: '1000',
+      pointerEvents: 'none'
+    });
+    document.body.classList.add('is-reordering');
+  };
+
+  const move = event => {
+    if (event.pointerId !== pointerId) return;
+    pointerY = event.clientY;
+    if (!dragging) return;
+    event.preventDefault();
+    row.style.top = `${pointerY - grabOffsetY}px`;
+    if (pointerY < 70) window.scrollBy(0, -10);
+    if (pointerY > window.innerHeight - 70) window.scrollBy(0, 10);
+    movePlaceholder(pointerY);
+  };
+
+  const finish = () => {
+    clearTimeout(holdTimer);
+    holdTimer = null;
+    if (dragging) {
+      rowsEl.insertBefore(row, placeholder);
+      placeholder.remove();
+      placeholder = null;
+      dragging = false;
+      row.classList.remove('dragging');
+      row.removeAttribute('aria-grabbed');
+      row.removeAttribute('style');
+      document.body.classList.remove('is-reordering');
+    }
+    if (pointerId !== null && handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId);
+    pointerId = null;
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', finish);
+    document.removeEventListener('pointercancel', finish);
+  };
+
+  handle.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    pointerId = event.pointerId;
+    pointerY = event.clientY;
+    handle.setPointerCapture?.(event.pointerId);
+    document.addEventListener('pointermove', move, {passive: false});
+    document.addEventListener('pointerup', finish);
+    document.addEventListener('pointercancel', finish);
+    holdTimer = setTimeout(startDragging, event.pointerType === 'mouse' ? 100 : 180);
+  });
+  handle.addEventListener('keydown', event => {
+    if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === 'ArrowUp' && row.previousElementSibling) rowsEl.insertBefore(row, row.previousElementSibling);
+    if (event.key === 'ArrowDown' && row.nextElementSibling) rowsEl.insertBefore(row.nextElementSibling, row);
+    handle.focus();
+  });
 }
 
 function escapeHtml(value) {
@@ -47,7 +151,7 @@ function clearValidation() { $('validation').hidden = true; }
 
 function bracket(value, points) {
   if (value <= points[0]) return [points[0], points[1]];
-  if (value >= points.at(-1)) return [points.at(-2), points.at(-1)];
+  if (value >= points[points.length - 1]) return [points[points.length - 2], points[points.length - 1]];
   for (let i = 0; i < points.length - 1; i++) if (value >= points[i] && value <= points[i + 1]) return [points[i], points[i + 1]];
 }
 
@@ -73,50 +177,80 @@ function formatFt(value) { return `${Math.round(value).toLocaleString()} ft`; }
 
 function calculate() {
   clearValidation();
-  const temp = Number($('temperature').value);
-  const elevation = Number($('elevation').value);
-  const rows = [...rowsEl.querySelectorAll('.altitude-row')].map((row, i) => ({
-    label: row.querySelector('.label-input').value.trim() || `Point ${i + 1}`,
-    altitude: Number(row.querySelector('.altitude-input').value)
-  }));
+  const tempValue = $('temperature').value.trim();
+  const elevationValue = $('elevation').value.trim();
+  const groundspeedValue = $('groundspeed').value.trim();
+  const temp = Number(tempValue);
+  const elevation = Number(elevationValue);
+  const groundspeed = Number(groundspeedValue);
+  const rows = [...rowsEl.querySelectorAll('.altitude-row')]
+    .filter(row => row.querySelector('.row-toggle').checked)
+    .map((row, i) => {
+      const altitudeValue = row.querySelector('.altitude-input').value.trim();
+      return {
+        label: row.querySelector('.label-input').value.trim() || `Point ${i + 1}`,
+        altitudeValue,
+        altitude: Number(altitudeValue)
+      };
+    });
+  if (!tempValue) return showValidation('Enter the airport temperature.');
+  if (!elevationValue) return showValidation('Enter the airport elevation.');
+  if (!groundspeedValue) return showValidation('Enter the FAF to MAP groundspeed.');
   if (!Number.isFinite(temp) || temp > -1 || temp < -50) return showValidation('Airport temperature must be between −1°C and −50°C.');
   if (!Number.isFinite(elevation) || elevation < -1500 || elevation > 15000) return showValidation('Enter a valid airport elevation between −1,500 and 15,000 ft MSL.');
-  if (rows.length < 8 || rows.some(r => !Number.isFinite(r.altitude))) return showValidation('Enter a published altitude for at least eight points.');
-  if (rows.some(r => r.altitude < elevation)) return showValidation('Each procedure altitude must be at or above the airport elevation.');
+  if (!Number.isFinite(groundspeed) || groundspeed <= 0 || groundspeed > 600) return showValidation('Enter a groundspeed between 1 and 600 knots.');
+  if (!rows.length) return showValidation('Switch on at least one altitude entry. Active FAF and MAP rows are required for the final-segment analysis.');
+  if (rows.some(r => !r.altitudeValue || !Number.isFinite(r.altitude))) return showValidation('Enter a published altitude for every active row.');
+  if (rows.some(r => r.altitude < elevation)) return showValidation('Each active procedure altitude must be at or above the airport elevation.');
 
   const computed = rows.map(r => {
     const height = r.altitude - elevation;
     const correction = correctionAt(temp, height);
     return {...r, height, correction, corrected: r.altitude + correction, trueUncorrected: Math.max(0, height - correction)};
   });
-  const pathPoints = computed.filter(r => r.height > 0);
-  const reference = pathPoints.find(r => /\bP?FAF\b/i.test(r.label)) || pathPoints.reduce((a, b) => b.height > a.height ? b : a, pathPoints[0]);
-  const referenceRatio = reference ? reference.trueUncorrected / reference.height : 1;
-  const actualAngle = Math.atan(Math.tan(3 * Math.PI / 180) * referenceRatio) * 180 / Math.PI;
-  lastResults = { temp, elevation, computed, actualAngle, referenceLabel: reference?.label || 'profile' };
+  const faf = computed.find(r => /\bP?FAF\b/i.test(r.label));
+  const map = computed.find(r => /\bMAP\b|missed approach point/i.test(r.label));
+  if (!faf || !map) return showValidation('Label one altitude FAF and one altitude MAP (or “Missed approach point”).');
+  const publishedDrop = faf.height - map.height;
+  if (publishedDrop <= 0) return showValidation('The FAF altitude must be higher than the MAP altitude.');
+  const trueDrop = faf.trueUncorrected - map.trueUncorrected;
+  if (trueDrop <= 0) return showValidation('The calculated cold true height at FAF must be higher than at MAP.');
+  const segmentDistanceFt = publishedDrop / STANDARD_GRADIENT;
+  const actualGradient = trueDrop / segmentDistanceFt;
+  const standardAngle = Math.atan(STANDARD_GRADIENT) * 180 / Math.PI;
+  const actualAngle = Math.atan(actualGradient) * 180 / Math.PI;
+  const standardVs = groundspeed * FEET_PER_MINUTE_PER_KNOT * STANDARD_GRADIENT;
+  const actualVs = groundspeed * FEET_PER_MINUTE_PER_KNOT * actualGradient;
+  const layerScale = trueDrop / publishedDrop;
+  const indicatedVs = actualVs / layerScale;
+  const samePathIndicatedVs = standardVs / layerScale;
+  lastResults = { temp, elevation, groundspeed, computed, faf, map, publishedDrop, trueDrop, segmentDistanceFt, actualGradient, standardAngle, actualAngle, standardVs, actualVs, layerScale, indicatedVs, samePathIndicatedVs };
   renderResults(lastResults);
 }
 
 function renderResults(data) {
   $('emptyState').hidden = true;
   $('results').hidden = false;
-  const max = data.computed.reduce((a, b) => b.correction > a.correction ? b : a, data.computed[0]);
-  $('actualAngle').textContent = `${data.actualAngle.toFixed(2)}°`;
-  $('shallowerBy').textContent = `${(3 - data.actualAngle).toFixed(2)}° shallower · based on ${data.referenceLabel}`;
-  $('maxCorrection').textContent = `+${Math.round(max.correction)} ft`;
-  $('maxCorrectionLabel').textContent = max.label;
-  $('resultTemp').textContent = `${data.temp}°C`;
-  $('resultElevation').textContent = `Field elevation ${formatFt(data.elevation)}`;
+  $('actualGradient').textContent = `${(data.actualGradient * 100).toFixed(2)}%`;
+  $('shallowerBy').textContent = `${data.actualAngle.toFixed(2)}° · ${(data.standardAngle - data.actualAngle).toFixed(2)}° shallower`;
+  $('standardVs').textContent = `${Math.round(data.standardVs)} fpm`;
+  $('standardVsNote').textContent = `5.2% at ${Math.round(data.groundspeed)} kt`;
+  $('actualVs').textContent = `${Math.round(data.actualVs)} fpm`;
+  $('actualVsNote').textContent = `true geometric · ${Math.round(data.standardVs - data.actualVs)} fpm lower`;
+  $('indicatedVs').textContent = `${Math.round(data.indicatedVs)} fpm`;
+  $('indicatedVsNote').textContent = `pressure-derived · ${((1 / data.layerScale - 1) * 100).toFixed(1)}% sensitivity`;
+  $('samePathIndicatedVs').textContent = `${Math.round(data.samePathIndicatedVs)} fpm indicated`;
   $('resultsBody').innerHTML = data.computed.map(r => `<tr><td>${escapeHtml(r.label)}</td><td>${formatFt(r.altitude)}</td><td>${formatFt(r.height)}</td><td>+${Math.round(r.correction)} ft</td><td><strong>${formatFt(r.corrected)}</strong></td></tr>`).join('');
   const extrapolated = data.computed.some(r => r.height > 5000);
-  $('methodNote').innerHTML = `<strong>Calculation note:</strong> Values are interpolated from the FAA/ICAO table and shown to the nearest foot. ${extrapolated ? 'One or more points exceed 5,000 ft AAE; those values use a linear extension of the final table interval, which the FAA permits as an optional extrapolation method. ' : ''}Operational rounding and which segments to correct must follow the applicable authority, chart, operator policy, and ATC instructions.`;
-  $('chartNarrative').textContent = `At ${data.temp} degrees Celsius, the estimated uncompensated true descent angle referenced at ${data.referenceLabel} is ${data.actualAngle.toFixed(2)} degrees, ${(3-data.actualAngle).toFixed(2)} degrees shallower than the standard 3 degree path.`;
+  $('methodNote').innerHTML = `<strong>Calculation note:</strong> Switched-off rows are excluded entirely from validation, calculations, output, and FAF–MAP analysis. Values are interpolated from the FAA/ICAO table and shown to the nearest foot. ${extrapolated ? 'One or more points exceed 5,000 ft AAE; those values use a linear extension of the final table interval, which the FAA permits as an optional extrapolation method. ' : ''}The VSI estimate uses a table-derived average FAF–MAP layer factor of ${data.layerScale.toFixed(4)}. Exact aircraft indication can differ because of the real temperature/virtual-temperature profile, static-system and ADC calibration, instrument lag, and local pressure structure. Operational guidance always takes precedence.`;
+  $('chartNarrative').textContent = `From FAF to MAP at ${data.temp} degrees Celsius, the cold true descent gradient is ${(data.actualGradient*100).toFixed(2)} percent or ${data.actualAngle.toFixed(2)} degrees. At ${data.groundspeed} knots, standard vertical speed is ${Math.round(data.standardVs)} feet per minute, cold geometric vertical speed is ${Math.round(data.actualVs)} feet per minute, and the pressure-derived cockpit VSI indication is ${Math.round(data.indicatedVs)} feet per minute.`;
   requestAnimationFrame(() => drawChart(data));
-  if (window.innerWidth < 1000) $('results').scrollIntoView({behavior: 'smooth', block: 'start'});
+  if (window.innerWidth >= 641 && window.innerWidth < 1000) $('results').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 
 function drawChart(data) {
   const canvas = $('profileChart');
+  const dayTheme = document.documentElement.dataset.theme === 'day';
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = Math.max(1, Math.round(rect.width * dpr));
@@ -126,12 +260,12 @@ function drawChart(data) {
   const w = rect.width, h = rect.height;
   const pad = {l: 50, r: 18, t: 18, b: 34};
   const pw = w-pad.l-pad.r, ph = h-pad.t-pad.b;
-  const maxHeight = Math.max(1000, ...data.computed.map(r => r.height));
-  const maxNm = (maxHeight / Math.tan(3*Math.PI/180)) / 6076.12;
+  const maxHeight = Math.max(500, data.publishedDrop);
+  const maxNm = data.segmentDistanceFt / 6076.12;
   ctx.font = '9px system-ui';
   ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(255,255,255,.09)';
-  ctx.fillStyle = '#81939b';
+  ctx.strokeStyle = dayTheme ? 'rgba(6,17,26,.12)' : 'rgba(255,255,255,.09)';
+  ctx.fillStyle = dayTheme ? '#52656d' : '#81939b';
   for (let i=0;i<=4;i++) {
     const y = pad.t + ph*i/4;
     ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
@@ -146,31 +280,57 @@ function drawChart(data) {
   const xAt = nm => pad.l + pw*(1-nm/maxNm);
   const yAt = ft => pad.t + ph*(1-ft/maxHeight);
   const gradient = ctx.createLinearGradient(0,pad.t,0,h-pad.b);
-  gradient.addColorStop(0,'rgba(103,216,255,.18)'); gradient.addColorStop(1,'rgba(103,216,255,0)');
+  gradient.addColorStop(0, dayTheme ? 'rgba(8,127,168,.14)' : 'rgba(103,216,255,.18)');
+  gradient.addColorStop(1, dayTheme ? 'rgba(8,127,168,0)' : 'rgba(103,216,255,0)');
   ctx.beginPath();
   for (let i=0;i<=70;i++) {
-    const nm=maxNm*(1-i/70), standard=nm*6076.12*Math.tan(3*Math.PI/180), correction=correctionAt(data.temp,standard), cold=Math.max(0,standard-correction);
+    const nm=maxNm*(1-i/70), progress=nm/maxNm, cold=data.trueDrop*progress;
     const x=xAt(nm), y=yAt(cold); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
   }
   ctx.lineTo(xAt(0),yAt(0)); ctx.closePath(); ctx.fillStyle=gradient; ctx.fill();
   function path(color, cold=false, dash=[]) {
     ctx.beginPath();
     for(let i=0;i<=70;i++){
-      const nm=maxNm*(1-i/70), standard=nm*6076.12*Math.tan(3*Math.PI/180), ft=cold?Math.max(0,standard-correctionAt(data.temp,standard)):standard;
+      const nm=maxNm*(1-i/70), progress=nm/maxNm, ft=cold?data.trueDrop*progress:data.publishedDrop*progress;
       const x=xAt(nm), y=yAt(ft); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
     }
     ctx.strokeStyle=color; ctx.lineWidth=2.2; ctx.setLineDash(dash); ctx.stroke(); ctx.setLineDash([]);
   }
-  path('#d8ff4f',false,[]); path('#67d8ff',true,[6,4]);
-  ctx.fillStyle='#d8ff4f'; ctx.textAlign='left'; ctx.fillText('3.00° ISA',pad.l+8,pad.t+13);
-  ctx.fillStyle='#67d8ff'; ctx.fillText(`${data.actualAngle.toFixed(2)}° cold`,pad.l+8,pad.t+27);
+  const standardColor = dayTheme ? '#587000' : '#d8ff4f';
+  const coldColor = dayTheme ? '#087fa8' : '#67d8ff';
+  path(standardColor,false,[]); path(coldColor,true,[6,4]);
+  ctx.fillStyle=standardColor; ctx.textAlign='left'; ctx.fillText(`${(STANDARD_GRADIENT*100).toFixed(1)}% / ${data.standardAngle.toFixed(2)}° standard`,pad.l+8,pad.t+13);
+  ctx.fillStyle=coldColor; ctx.fillText(`${(data.actualGradient*100).toFixed(2)}% / ${data.actualAngle.toFixed(2)}° cold`,pad.l+8,pad.t+27);
 }
 
 initialRows.forEach(([label, altitude]) => addAltitudeRow(label, altitude));
+$('themeToggle').addEventListener('click', () => {
+  const nextTheme = document.documentElement.dataset.theme === 'night' ? 'day' : 'night';
+  document.documentElement.dataset.theme = nextTheme;
+  try { localStorage.setItem('cold-altitude-theme', nextTheme); } catch {}
+  syncThemeControl();
+  if (lastResults) requestAnimationFrame(() => drawChart(lastResults));
+});
+function syncThemeControl() {
+  const isNight = document.documentElement.dataset.theme === 'night';
+  const button = $('themeToggle');
+  button.querySelector('.theme-icon').textContent = isNight ? '☀' : '☾';
+  button.querySelector('.theme-label').textContent = isNight ? 'Day' : 'Night';
+  button.setAttribute('aria-label', `Switch to ${isNight ? 'day' : 'night'} theme`);
+  button.setAttribute('aria-pressed', String(isNight));
+  $('themeColor').content = isNight ? '#07141e' : '#edf1ef';
+}
+syncThemeControl();
 $('addRow').addEventListener('click', () => addAltitudeRow('', ''));
 $('calculate').addEventListener('click', calculate);
+$('temperature').addEventListener('input', event => {
+  const raw = event.currentTarget.value.trim();
+  if (!raw || raw === '-') return;
+  const value = Number(raw);
+  if (Number.isFinite(value) && value > 0) event.currentTarget.value = String(-value);
+});
 $('loadExample').addEventListener('click', () => {
-  $('temperature').value = -20; $('elevation').value = 1200; rowsEl.innerHTML=''; initialRows.forEach(([l,a])=>addAltitudeRow(l,a)); clearValidation();
+  $('temperature').value = -20; $('elevation').value = 1200; $('groundspeed').value = 120; rowsEl.innerHTML=''; exampleRows.forEach(([l,a])=>addAltitudeRow(l,a)); clearValidation();
 });
 $('printResults').addEventListener('click', () => window.print());
 window.addEventListener('resize', () => { if (lastResults) drawChart(lastResults); });
