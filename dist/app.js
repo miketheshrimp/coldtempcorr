@@ -312,6 +312,22 @@ $('themeToggle').addEventListener('click', () => {
   syncThemeControl();
   if (lastResults) requestAnimationFrame(() => drawChart(lastResults));
 });
+const deviceToggle = $('deviceToggle');
+deviceToggle.addEventListener('click', () => {
+  const phonePreview = document.documentElement.dataset.preview !== 'phone';
+  document.documentElement.dataset.preview = phonePreview ? 'phone' : 'normal';
+  try { localStorage.setItem('cold-altitude-preview', document.documentElement.dataset.preview); } catch {}
+  syncDeviceControl();
+  if (lastResults) requestAnimationFrame(() => drawChart(lastResults));
+});
+function syncDeviceControl() {
+  const phonePreview = document.documentElement.dataset.preview === 'phone';
+  deviceToggle.textContent = phonePreview ? 'Tablet view' : 'Phone view';
+  deviceToggle.setAttribute('aria-label', phonePreview ? 'Switch to tablet preview' : 'Switch to iPhone preview');
+  deviceToggle.setAttribute('aria-pressed', String(phonePreview));
+}
+try { document.documentElement.dataset.preview = localStorage.getItem('cold-altitude-preview') || 'normal'; } catch { document.documentElement.dataset.preview = 'normal'; }
+syncDeviceControl();
 function syncThemeControl() {
   const isNight = document.documentElement.dataset.theme === 'night';
   const button = $('themeToggle');

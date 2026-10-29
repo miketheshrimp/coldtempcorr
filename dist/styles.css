@@ -185,6 +185,8 @@ td strong { color: var(--acid); }
 .method-copy p { margin: 0 0 18px; }
 .method-copy a { color: var(--acid); text-decoration: none; border-bottom: 1px solid rgba(216,255,79,.35); padding-bottom: 3px; }
 .source-links { display: flex; flex-wrap: wrap; gap: 14px 22px; }
+.device-toggle { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px; min-height: 30px; padding: 0 10px; font: inherit; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.device-toggle:hover, .device-toggle[aria-pressed="true"] { border-color: var(--ice); color: var(--ice); }
 footer { min-height: 80px; padding: 0 max(4vw, env(safe-area-inset-right, 0)) env(safe-area-inset-bottom, 0) max(4vw, env(safe-area-inset-left, 0)); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); color: #81939b; text-transform: uppercase; letter-spacing: .12em; font-size: 9px; }
 html[data-theme="day"] .status-pill { color: #475a63; }
 html[data-theme="day"] .vsi-explainer span, html[data-theme="day"] .legend { color: #53676f; }
@@ -213,6 +215,7 @@ body, .topbar, .input-panel, .results-panel, .input-shell, .row-input, .summary-
   .brand strong { font-size: 13px; }
   .brand small { display: none; }
   .status-cluster { gap: 6px; }
+  .device-toggle { display: none; }
   .eyebrow { display: none; }
   .theme-label { display: none; }
   .theme-toggle { min-width: 32px; min-height: 32px; justify-content: center; padding: 5px; }
@@ -280,6 +283,68 @@ body, .topbar, .input-panel, .results-panel, .input-shell, .row-input, .summary-
   .table-scroll { height: calc(100% - 38px); overflow: auto; }
   th, td { padding: 7px 8px; font-size: 9px; }
   .method-note { padding: 14px; border: 1px solid var(--line); border-radius: 12px; overflow-y: auto; }
+}
+@media (min-width: 641px) {
+  html[data-preview="phone"] { background: #02090e; }
+  html[data-preview="phone"] body { width: 390px; height: 844px; max-height: 100vh; margin: 0 auto; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 18px 60px rgba(0,0,0,.4); }
+  html[data-preview="phone"] .topbar { min-height: 54px; height: 54px; padding: 0 12px; }
+  html[data-preview="phone"] .brand { gap: 8px; }
+  html[data-preview="phone"] .brand-mark { width: 30px; height: 30px; font-size: 16px; }
+  html[data-preview="phone"] .brand strong { font-size: 13px; }
+  html[data-preview="phone"] .brand small, html[data-preview="phone"] .eyebrow, html[data-preview="phone"] .theme-label { display: none; }
+  html[data-preview="phone"] .status-cluster { gap: 6px; }
+  html[data-preview="phone"] .device-toggle { min-height: 30px; padding: 0 7px; font-size: 7px; }
+  html[data-preview="phone"] .theme-toggle { min-width: 32px; min-height: 32px; justify-content: center; padding: 5px; }
+  html[data-preview="phone"] .status-pill { min-height: 32px; padding: 6px 9px; }
+  html[data-preview="phone"] .status-pill span { display: none; }
+  html[data-preview="phone"] main { height: calc(100% - 76px); overflow: hidden; }
+  html[data-preview="phone"] .hero, html[data-preview="phone"] .method-section { display: none; }
+  html[data-preview="phone"] footer { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; z-index: 10; display: flex; width: 390px; min-height: 22px; height: 22px; padding: 0 12px; background: var(--panel); font-size: 7px; }
+  html[data-preview="phone"] footer span:first-child { display: none; }
+  html[data-preview="phone"] .workspace { width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; grid-template-columns: 1fr; grid-template-rows: minmax(320px, 54%) minmax(0, 46%); box-shadow: none; }
+  html[data-preview="phone"] .input-panel, html[data-preview="phone"] .results-panel { min-height: 0; padding: 10px 12px; overflow: hidden; }
+  html[data-preview="phone"] .panel-heading h2, html[data-preview="phone"] .altitude-heading h2 { font-size: 16px; }
+  html[data-preview="phone"] .step { width: 23px; height: 23px; font-size: 8px; }
+  html[data-preview="phone"] .panel-heading > div, html[data-preview="phone"] .altitude-heading > div { gap: 7px; }
+  html[data-preview="phone"] .text-button { font-size: 10px; }
+  html[data-preview="phone"] .conditions-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; padding: 7px 0 8px; }
+  html[data-preview="phone"] .field > span { margin-bottom: 4px; font-size: 9px; white-space: nowrap; }
+  html[data-preview="phone"] .field small, html[data-preview="phone"] .segment-hint, html[data-preview="phone"] .column-labels { display: none; }
+  html[data-preview="phone"] .input-shell { min-height: 38px; border-radius: 9px; }
+  html[data-preview="phone"] .input-shell input { padding-left: 9px; font-size: 16px; }
+  html[data-preview="phone"] .input-shell b { padding-right: 7px; font-size: 8px; }
+  html[data-preview="phone"] .altitude-heading { padding: 8px 0 5px; }
+  html[data-preview="phone"] .altitude-rows { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 4px 6px; }
+  html[data-preview="phone"] .altitude-row { grid-template-columns: minmax(0,1fr) 68px 20px 15px; gap: 3px; }
+  html[data-preview="phone"] .toggle-wrap { display: none; }
+  html[data-preview="phone"] .row-input { height: 34px; border-radius: 8px; font-size: 12px; padding-left: 7px; padding-right: 5px; }
+  html[data-preview="phone"] .altitude-wrap .row-input { padding: 0 7px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  html[data-preview="phone"] .altitude-wrap span { display: none; }
+  html[data-preview="phone"] .drag-handle { height: 32px; padding: 0 4px 0 0; font-size: 14px; }
+  html[data-preview="phone"] .remove-row { padding: 0; }
+  html[data-preview="phone"] .add-button, html[data-preview="phone"] .calculate-button { margin-top: 6px; min-height: 36px; height: 36px; vertical-align: top; }
+  html[data-preview="phone"] .add-button { width: 35%; font-size: 10px; }
+  html[data-preview="phone"] .calculate-button { width: calc(65% - 6px); display: inline-flex; padding: 0 13px; font-size: 11px; }
+  html[data-preview="phone"] .validation { position: absolute; left: 12px; right: 12px; bottom: 52px; z-index: 4; margin: 0; }
+  html[data-preview="phone"] .input-panel { position: relative; }
+  html[data-preview="phone"] .results-panel { border-top: 1px solid var(--line); }
+  html[data-preview="phone"] .results-heading { height: 28px; }
+  html[data-preview="phone"] .results-heading .icon-button { width: 27px; height: 27px; font-size: 11px; }
+  html[data-preview="phone"] .mobile-results-hint { display: block; margin-left: auto; }
+  html[data-preview="phone"] .empty-state { min-height: 0; height: calc(100% - 28px); }
+  html[data-preview="phone"] #results { height: calc(100% - 28px); display: grid; grid-auto-flow: column; grid-auto-columns: 92%; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 6px 0 8px; scroll-snap-type: x mandatory; }
+  html[data-preview="phone"] #results > * { height: 100%; min-width: 0; margin: 0; scroll-snap-align: start; }
+  html[data-preview="phone"] .summary-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; }
+  html[data-preview="phone"] .summary-card, html[data-preview="phone"] .summary-card.featured { min-height: 0; padding: 9px; }
+  html[data-preview="phone"] .summary-card strong { font-size: 21px; }
+  html[data-preview="phone"] .summary-card small { font-size: 8px; }
+  html[data-preview="phone"] .vsi-explainer { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 10px; padding: 18px; }
+  html[data-preview="phone"] .chart-card, html[data-preview="phone"] .table-card { border-radius: 12px; }
+  html[data-preview="phone"] .chart-title, html[data-preview="phone"] .table-title { padding: 9px 11px; }
+  html[data-preview="phone"] .chart-title p { display: none; }
+  html[data-preview="phone"] .canvas-wrap { height: calc(100% - 42px); padding: 5px; }
+  html[data-preview="phone"] .table-scroll { height: calc(100% - 38px); overflow: auto; }
+  html[data-preview="phone"] th, html[data-preview="phone"] td { padding: 7px 8px; font-size: 9px; }
 }
 @media print {
   .topbar, .hero, .input-panel, .method-section, footer, .icon-button { display: none !important; }
