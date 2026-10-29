@@ -61,10 +61,10 @@
           <label class="field temperature-field">
             <span>Airport temperature</span>
             <div class="input-shell">
-              <input id="temperature" type="number" inputmode="decimal" min="-50" max="-1" step="1" placeholder="—" aria-describedby="tempHint">
+              <input id="temperature" type="number" inputmode="decimal" min="-50" max="0" step="1" placeholder="—" aria-describedby="tempHint">
               <b>°C</b>
             </div>
-            <small id="tempHint">Type 1–50; the minus sign is added automatically</small>
+            <small id="tempHint">Type 0–50; the minus sign is added automatically</small>
           </label>
           <label class="field">
             <span>Airport elevation</span>
@@ -205,7 +205,7 @@
 
   <footer>
     <span>Cold Altitude Correction</span>
-    <span>Version 1.0.2 · Works offline after first successful load</span>
+    <span>Version 1.0.3 · Works offline after first successful load</span>
   </footer>
 
   <script src="app.js" defer></script>

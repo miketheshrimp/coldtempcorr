@@ -12,7 +12,7 @@ The app is designed for pilots and flight-planning discussions. It calculates co
 ## Features
 
 - Interpolates the FAA-published ICAO Cold Temperature Error Table.
-- Accepts airport temperatures from −1°C to −50°C. Enter the absolute number; the app adds the minus sign automatically.
+- Accepts airport temperatures from 0°C to −50°C. Enter the absolute number; the app adds the minus sign automatically for below-zero values.
 - Calculates the correction and resulting indicated altitude for any active procedure row.
 - Starts with common labels including IAF, IF, FAF, MAP / DDA / MDA / DA, missed-approach altitude, holding altitude, and MSA.
 - Automatically activates a row when an altitude is entered and excludes it completely when the value is cleared.

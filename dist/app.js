@@ -174,6 +174,10 @@ function correctionAt(temp, height) {
 }
 
 function formatFt(value) { return `${Math.round(value).toLocaleString()} ft`; }
+function formatCorrectedAltitude(row, isMap = false) {
+  const increment = isMap || /\b(?:MAP|MDA|DDA|DA)\b/i.test(row.label) ? 10 : 100;
+  return `${(Math.ceil(row.corrected / increment) * increment).toLocaleString()} ft`;
+}
 
 function calculate() {
   clearValidation();
@@ -196,7 +200,7 @@ function calculate() {
   if (!tempValue) return showValidation('Enter the airport temperature.');
   if (!elevationValue) return showValidation('Enter the airport elevation.');
   if (!groundspeedValue) return showValidation('Enter the FAF to MAP groundspeed.');
-  if (!Number.isFinite(temp) || temp > -1 || temp < -50) return showValidation('Airport temperature must be between −1°C and −50°C.');
+  if (!Number.isFinite(temp) || temp > 0 || temp < -50) return showValidation('Airport temperature must be between 0°C and −50°C.');
   if (!Number.isFinite(elevation) || elevation < -1500 || elevation > 15000) return showValidation('Enter a valid airport elevation between −1,500 and 15,000 ft MSL.');
   if (!Number.isFinite(groundspeed) || groundspeed <= 0 || groundspeed > 600) return showValidation('Enter a groundspeed between 1 and 600 knots.');
   if (!rows.length) return showValidation('Switch on at least one altitude entry. Active FAF and MAP rows are required for the final-segment analysis.');
@@ -241,7 +245,7 @@ function renderResults(data) {
   $('indicatedVsNote').textContent = `pressure-derived · ${((1 / data.layerScale - 1) * 100).toFixed(1)}% sensitivity`;
   $('samePathIndicatedVs').textContent = `${Math.round(data.samePathIndicatedVs)} fpm indicated`;
   const finalPoints = [data.faf, data.map];
-  $('resultsBody').innerHTML = finalPoints.map((r, index) => `<tr><td>${index === 0 ? 'FAF' : 'MAP'}</td><td>${formatFt(r.altitude)}</td><td>+${Math.round(r.correction)} ft</td><td><strong>${formatFt(r.corrected)}</strong></td></tr>`).join('');
+  $('resultsBody').innerHTML = finalPoints.map((r, index) => `<tr><td>${index === 0 ? 'FAF' : 'MAP'}</td><td>${formatFt(r.altitude)}</td><td>+${Math.round(r.correction)} ft</td><td><strong>${formatCorrectedAltitude(r, index === 1)}</strong></td></tr>`).join('');
   const extrapolated = data.computed.some(r => r.height > 5000);
   $('methodNote').innerHTML = `<strong>Calculation note:</strong> Switched-off rows are excluded entirely from validation, calculations, output, and FAF–MAP analysis. Values are interpolated from the FAA/ICAO table and shown to the nearest foot. ${extrapolated ? 'One or more points exceed 5,000 ft AAE; those values use a linear extension of the final table interval, which the FAA permits as an optional extrapolation method. ' : ''}The VSI estimate uses a table-derived average FAF–MAP layer factor of ${data.layerScale.toFixed(4)}. Exact aircraft indication can differ because of the real temperature/virtual-temperature profile, static-system and ADC calibration, instrument lag, and local pressure structure. Operational guidance always takes precedence.`;
   $('chartNarrative').textContent = `From FAF to MAP at ${data.temp} degrees Celsius, the cold true descent gradient is ${(data.actualGradient*100).toFixed(2)} percent or ${data.actualAngle.toFixed(2)} degrees. At ${data.groundspeed} knots, standard vertical speed is ${Math.round(data.standardVs)} feet per minute, cold geometric vertical speed is ${Math.round(data.actualVs)} feet per minute, and the pressure-derived cockpit VSI indication is ${Math.round(data.indicatedVs)} feet per minute.`;
