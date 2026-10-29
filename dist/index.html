@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07141e">
+  <meta name="description" content="Offline cold-temperature altitude correction and descent-path calculator.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <title>Cold Altitude Correction</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Cold Altitude Correction home">
+      <span class="brand-mark" aria-hidden="true">△</span>
+      <span>
+        <strong>Cold Altitude</strong>
+        <small>Correction calculator</small>
+      </span>
+    </a>
+    <div class="status-cluster">
+      <span class="eyebrow">FAA / ICAO TABLE METHOD</span>
+      <span id="offlineStatus" class="status-pill"><i></i><span>Preparing offline use</span></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="kicker">Flight planning utility</p>
+        <h1>See the altitude<br><em>cold air takes away.</em></h1>
+      </div>
+      <p class="hero-copy">Calculate indicated altitude corrections and visualize how an uncompensated 3° barometric descent becomes shallower in below-zero conditions.</p>
+    </section>
+
+    <section class="workspace" aria-label="Cold temperature correction workspace">
+      <div class="input-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="step">01</span>
+            <h2>Conditions</h2>
+          </div>
+          <button id="loadExample" class="text-button" type="button">Load example</button>
+        </div>
+
+        <div class="conditions-grid">
+          <label class="field temperature-field">
+            <span>Airport temperature</span>
+            <div class="input-shell">
+              <input id="temperature" type="number" inputmode="decimal" min="-50" max="-1" step="1" value="-20" aria-describedby="tempHint">
+              <b>°C</b>
+            </div>
+            <small id="tempHint">Enter −1°C to −50°C</small>
+          </label>
+          <label class="field">
+            <span>Airport elevation</span>
+            <div class="input-shell">
+              <input id="elevation" type="number" inputmode="numeric" min="-1500" max="15000" step="1" value="1200">
+              <b>ft MSL</b>
+            </div>
+            <small>Elevation of altimeter source</small>
+          </label>
+        </div>
+
+        <div class="altitude-heading">
+          <div>
+            <span class="step">02</span>
+            <h2>Procedure altitudes</h2>
+          </div>
+          <span class="count-label"><strong id="rowCount">8</strong> entries</span>
+        </div>
+
+        <div class="column-labels" aria-hidden="true">
+          <span>Label</span><span>Published altitude</span><span></span>
+        </div>
+        <div id="altitudeRows" class="altitude-rows"></div>
+        <button id="addRow" class="add-button" type="button"><span>＋</span> Add altitude</button>
+
+        <div id="validation" class="validation" role="alert" hidden></div>
+        <button id="calculate" class="calculate-button" type="button">
+          <span>Calculate corrections</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
+
+      <div class="results-panel" aria-live="polite">
+        <div class="panel-heading results-heading">
+          <div>
+            <span class="step">03</span>
+            <h2>Corrected profile</h2>
+          </div>
+          <button id="printResults" class="icon-button" type="button" title="Print or save as PDF" aria-label="Print or save results">↗</button>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+          <div class="radar" aria-hidden="true"><span></span></div>
+          <h3>Ready for the cold.</h3>
+          <p>Enter your conditions and at least eight procedure altitudes to build the corrected profile.</p>
+        </div>
+
+        <div id="results" hidden>
+          <div class="summary-grid">
+            <article class="summary-card featured">
+              <span>Actual uncompensated path</span>
+              <strong id="actualAngle">—</strong>
+              <small id="shallowerBy">—</small>
+            </article>
+            <article class="summary-card">
+              <span>Largest correction</span>
+              <strong id="maxCorrection">—</strong>
+              <small id="maxCorrectionLabel">—</small>
+            </article>
+            <article class="summary-card">
+              <span>Temperature</span>
+              <strong id="resultTemp">—</strong>
+              <small id="resultElevation">—</small>
+            </article>
+          </div>
+
+          <section class="chart-card">
+            <div class="chart-title">
+              <div>
+                <h3>3° descent path comparison</h3>
+                <p>True height above airport vs. distance to threshold</p>
+              </div>
+              <div class="legend" aria-label="Chart legend">
+                <span><i class="standard"></i> ISA 3°</span>
+                <span><i class="cold"></i> Cold, uncorrected</span>
+              </div>
+            </div>
+            <div class="canvas-wrap"><canvas id="profileChart" role="img" aria-label="Descent profile chart"></canvas></div>
+            <p id="chartNarrative" class="sr-only"></p>
+          </section>
+
+          <section class="table-card">
+            <div class="table-title">
+              <h3>Altitude corrections</h3>
+              <span>ADD TO PUBLISHED</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Point</th><th>Published</th><th>Height AAE</th><th>Correction</th><th>Fly indicated</th></tr></thead>
+                <tbody id="resultsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <div id="methodNote" class="method-note"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="method-section">
+      <div>
+        <p class="kicker">Method & limitations</p>
+        <h2>Built for planning.<br>Not a substitute for procedure guidance.</h2>
+      </div>
+      <div class="method-copy">
+        <p>The calculator bilinearly interpolates the FAA-published ICAO Cold Temperature Error Table using reported airport temperature and height above airport. Corrections are added to published altitudes; the altimeter setting itself is not changed.</p>
+        <p>FAA procedures, applicable state rules, operator policy, chart notes, and ATC instructions always take precedence. Coordinate corrections with ATC where required. Baro-VNAV temperature limits are separate.</p>
+        <a href="https://www.faa.gov/air_traffic/publications/atpubs/aim_html/chap7_section_3.html" target="_blank" rel="noreferrer">Open FAA AIM guidance ↗</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Cold Altitude Correction</span>
+    <span>Works offline after first successful load</span>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

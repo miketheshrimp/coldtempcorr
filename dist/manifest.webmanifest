@@ -1,0 +1,10 @@
+{
+  "name": "Cold Altitude Correction",
+  "short_name": "Cold Altitude",
+  "description": "Offline cold-temperature altitude correction and descent-path calculator.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07141e",
+  "theme_color": "#07141e",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
