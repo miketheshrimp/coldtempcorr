@@ -122,11 +122,29 @@
         </div>
 
         <div id="results" hidden>
+          <section class="table-card">
+            <div class="table-title">
+              <h3>Altitude corrections</h3>
+              <span>ADD TO PUBLISHED</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Point</th><th>Published</th><th>Correction</th><th>Altitude after correction</th></tr></thead>
+                <tbody id="resultsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
           <div class="summary-grid">
             <article class="summary-card featured">
               <span>Actual cold final gradient</span>
               <strong id="actualGradient">—</strong>
               <small id="shallowerBy">—</small>
+            </article>
+            <article class="summary-card">
+              <span>Cold cockpit VSI</span>
+              <strong id="indicatedVs">—</strong>
+              <small id="indicatedVsNote">—</small>
             </article>
             <article class="summary-card">
               <span>Standard vertical speed</span>
@@ -138,12 +156,8 @@
               <strong id="actualVs">—</strong>
               <small id="actualVsNote">—</small>
             </article>
-            <article class="summary-card">
-              <span>Cold cockpit VSI</span>
-              <strong id="indicatedVs">—</strong>
-              <small id="indicatedVsNote">—</small>
-            </article>
           </div>
+
           <div class="vsi-explainer">
             <span>Same physical 5.2% path in cold air</span>
             <strong id="samePathIndicatedVs">—</strong>
@@ -163,19 +177,6 @@
             </div>
             <div class="canvas-wrap"><canvas id="profileChart" role="img" aria-label="Descent profile chart"></canvas></div>
             <p id="chartNarrative" class="sr-only"></p>
-          </section>
-
-          <section class="table-card">
-            <div class="table-title">
-              <h3>Altitude corrections</h3>
-              <span>ADD TO PUBLISHED</span>
-            </div>
-            <div class="table-scroll">
-              <table>
-                <thead><tr><th>Point</th><th>Published</th><th>Height AAE</th><th>Correction</th><th>Fly indicated</th></tr></thead>
-                <tbody id="resultsBody"></tbody>
-              </table>
-            </div>
           </section>
 
           <div id="methodNote" class="method-note"></div>
@@ -203,7 +204,7 @@
 
   <footer>
     <span>Cold Altitude Correction</span>
-    <span>Version 1.0.0 · Works offline after first successful load</span>
+    <span>Version 1.0.1 · Works offline after first successful load</span>
   </footer>
 
   <script src="app.js" defer></script>
