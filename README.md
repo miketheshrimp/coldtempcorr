@@ -1,8 +1,14 @@
 # Cold Altitude Correction
 
+## 中文简介
+
+这是一个可离线使用的低温高度修正与进近下降剖面计算工具，面向飞行员和飞行计划使用。输入机场温度、机场标高、地速以及程序各点的发布高度后，工具会根据 FAA/ICAO 低温修正表计算应加的高度修正，并比较 FAF 至 MAP 之间标准 3 度下降剖面与低温条件下实际几何下降剖面的差异。
+
+工具仅供飞行计划和学习参考，不能替代正式航图、法规、运行人程序、机组判断或空中交通管制指令。
+
 An offline-capable web calculator for cold-temperature altitude corrections and final-approach descent-path analysis.
 
-**Live app:** [rack.228311.xyz:49173](https://rack.228311.xyz:49173/)
+**Live apps:** [rack.228311.xyz:49173](https://rack.228311.xyz:49173/) · [tool.228311.xyz:49173](https://tool.228311.xyz:49173/)
 
 The app is designed for pilots and flight-planning discussions. It calculates corrections for selected procedure altitudes, then compares a nominal 5.2% (approximately 3°) FAF-to-MAP profile with the shallower geometric path that results when uncompensated barometric altitudes are flown in cold air.
 
@@ -25,7 +31,7 @@ The app is designed for pilots and flight-planning discussions. It calculates co
 
 ## Using the calculator
 
-1. Open the [live app](https://rack.228311.xyz:49173/) while connected to the internet at least once.
+1. Open either [rack.228311.xyz:49173](https://rack.228311.xyz:49173/) or [tool.228311.xyz:49173](https://tool.228311.xyz:49173/) while connected to the internet at least once.
 2. Enter the positive magnitude of the below-zero airport temperature. For example, enter `18` for −18°C.
 3. Enter the airport elevation in feet MSL.
 4. Enter the expected FAF-to-MAP groundspeed in knots.
