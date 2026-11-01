@@ -409,3 +409,15 @@ html[data-theme="day"] .mandatory-note { color: #8a6400; }
 @media (min-width: 641px) {
   html[data-preview="phone"] .status-pill .update-icon { display: inline-block; }
 }
+
+/* Phone fix v1.0.14: the input panel must scroll instead of clipping, so Section 3
+   can never cover Calculate again, however tall Section 2 gets. The note stays
+   centered, but compact on phone so it costs only ~6px more than the original. */
+@media (max-width: 640px) {
+  .input-panel { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+  .mandatory-note { margin: 2px 0 8px; }
+}
+@media (min-width: 641px) {
+  html[data-preview="phone"] .input-panel { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+  html[data-preview="phone"] .mandatory-note { margin: 2px 0 8px; }
+}
