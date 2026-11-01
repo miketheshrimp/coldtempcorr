@@ -210,7 +210,7 @@ body, .topbar, .input-panel, .results-panel, .input-shell, .row-input, .summary-
 .hot-summary-grid { grid-template-columns: 1fr 1fr 1fr; }
 .heading-actions { display: flex; gap: 14px; align-items: center; }
 .mandatory-shell { border: 2px solid #f2b705 !important; box-shadow: 0 0 0 3px rgba(242,183,5,.22); }
-.mandatory-note { color: #d9a400; font-size: 11px; line-height: 1.5; margin: -14px 0 20px; }
+.mandatory-note { color: #d9a400; font-size: 11px; line-height: 1.6; margin: 16px 0 28px; text-align: center; }
 html[data-theme="day"] .mandatory-note { color: #8a6400; }
 .altitude-row.mandatory-row .row-input { border: 2px solid #f2b705; box-shadow: 0 0 0 2px rgba(242,183,5,.22); }
 .hot-table table { table-layout: fixed; width: 100%; }
