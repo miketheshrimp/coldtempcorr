@@ -421,3 +421,31 @@ html[data-theme="day"] .mandatory-note { color: #8a6400; }
   html[data-preview="phone"] .input-panel { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
   html[data-preview="phone"] .mandatory-note { margin: 2px 0 8px; }
 }
+
+/* Phone full-page layout v1.0.15 (LOCAL ONLY, not deployed):
+   Drop the 54%/46% split-screen. The whole page scrolls as one document:
+   Sections 1 + 2 are in the normal flow and fit in one view, Section 3 sits
+   below them and is reached by scrolling the page down, not by scrolling
+   inside the input panel. The 1.0.14 scroll-inside-panel rule is superseded
+   by this: input panel height is auto and overflow is visible. */
+@media (max-width: 640px) {
+  html, body { height: auto; overflow: auto; }
+  body { height: auto; }
+  main { height: auto; overflow: visible; }
+  .workspace { height: auto; grid-template-rows: auto auto; }
+  .input-panel, .results-panel { height: auto; overflow: visible; }
+  .input-panel { overflow-y: visible; overflow-x: visible; }
+  .results-panel { border-top: 1px solid var(--line); }
+  .empty-state { height: auto; min-height: 0; }
+  #results { height: auto; overflow-y: visible; }
+  footer { position: static; }
+}
+@media (min-width: 641px) {
+  html[data-preview="phone"] body { height: auto; overflow: visible; }
+  html[data-preview="phone"] main { height: auto; overflow: visible; }
+  html[data-preview="phone"] .workspace { height: auto; grid-template-rows: auto auto; }
+  html[data-preview="phone"] .input-panel, html[data-preview="phone"] .results-panel { height: auto; overflow: visible; }
+  html[data-preview="phone"] .empty-state { height: auto; min-height: 0; }
+  html[data-preview="phone"] #results { height: auto; overflow-y: visible; }
+  html[data-preview="phone"] footer { position: static; transform: none; width: auto; }
+}
