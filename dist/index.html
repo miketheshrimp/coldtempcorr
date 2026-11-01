@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="format-detection" content="telephone=no">
-  <meta name="description" content="Offline cold-temperature altitude correction and descent-path calculator.">
+  <meta name="description" content="Offline temperature and descent calculator: cold-temperature altitude correction and hot-temperature vertical speed.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
@@ -17,15 +17,15 @@
       document.documentElement.dataset.theme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day');
     } catch { document.documentElement.dataset.theme = 'night'; }
   </script>
-  <title>Cold Altitude Correction</title>
+  <title>Temperature &amp; Descent Calculator</title>
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#" aria-label="Cold Altitude Correction home">
+    <a class="brand" href="#" aria-label="Temperature and Descent Calculator home">
       <span class="brand-mark" aria-hidden="true">△</span>
       <span>
-        <strong>Cold Altitude</strong>
-        <small>Correction calculator</small>
+        <strong>Temperature &amp; Descent</strong>
+        <small>Cold correction · Hot VSI calculator</small>
       </span>
     </a>
     <div class="status-cluster">
@@ -34,7 +34,7 @@
       <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to day theme">
         <span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">Day</span>
       </button>
-      <span id="offlineStatus" class="status-pill"><i></i><span>Preparing offline use</span></span>
+      <button id="offlineStatus" class="status-pill" type="button" title="Check for app update — reloads to the latest version if one is available" aria-label="Check for app update"><i></i><span>Preparing offline use</span><span class="update-icon" aria-hidden="true">↻</span></button>
     </div>
   </header>
 
@@ -42,25 +42,33 @@
     <section class="hero">
       <div>
         <p class="kicker">Flight planning utility</p>
-        <h1>See the altitude<br><em>cold air takes away.</em></h1>
+        <h1 id="heroTitle">See the altitude<br><em>cold air takes away.</em></h1>
       </div>
-      <p class="hero-copy">Calculate indicated altitude corrections and visualize how an uncompensated 3° barometric descent becomes shallower in below-zero conditions.</p>
+      <p class="hero-copy" id="heroCopy">Calculate indicated altitude corrections and visualize how an uncompensated 3° barometric descent becomes shallower in below-zero conditions.</p>
     </section>
 
-    <section class="workspace" aria-label="Cold temperature correction workspace">
+    <nav class="mode-switch" role="tablist" aria-label="Calculator mode">
+      <button id="modeCold" class="mode-button is-active" type="button" role="tab" aria-selected="true">Cold correction</button>
+      <button id="modeHot" class="mode-button" type="button" role="tab" aria-selected="false">Hot VSI</button>
+    </nav>
+
+    <section id="coldWorkspace" class="workspace" aria-label="Cold temperature correction workspace">
       <div class="input-panel">
         <div class="panel-heading">
           <div>
             <span class="step">01</span>
             <h2>Conditions</h2>
           </div>
-          <button id="loadExample" class="text-button" type="button">Load example</button>
+          <div class="heading-actions">
+            <button id="loadExample" class="text-button" type="button">Load example</button>
+            <button id="clearCold" class="text-button" type="button">Clear data</button>
+          </div>
         </div>
 
         <div class="conditions-grid">
           <label class="field temperature-field">
             <span>Airport temperature</span>
-            <div class="input-shell">
+            <div class="input-shell mandatory-shell">
               <input id="temperature" type="number" inputmode="decimal" min="-50" max="0" step="1" placeholder="—" aria-describedby="tempHint">
               <b>°C</b>
             </div>
@@ -68,7 +76,7 @@
           </label>
           <label class="field">
             <span>Airport elevation</span>
-            <div class="input-shell">
+            <div class="input-shell mandatory-shell">
               <input id="elevation" type="number" inputmode="numeric" min="-1500" max="15000" step="1" placeholder="—">
               <b>ft MSL</b>
             </div>
@@ -76,13 +84,14 @@
           </label>
           <label class="field">
             <span>Groundspeed</span>
-            <div class="input-shell">
+            <div class="input-shell mandatory-shell">
               <input id="groundspeed" type="number" inputmode="decimal" min="1" max="600" step="1" placeholder="—">
               <b>kt</b>
             </div>
-            <small>FAF to MAP groundspeed</small>
+            <small>FAF to DA/MDA groundspeed</small>
           </label>
         </div>
+        <p class="mandatory-note">Amber boxes are required: temperature, elevation, groundspeed, plus one FAF row and one DA/MDA row.</p>
 
         <div class="altitude-heading">
           <div>
@@ -91,7 +100,7 @@
           </div>
           <span class="count-label"><strong id="rowCount">8</strong> entries</span>
         </div>
-        <p class="segment-hint">Entering an altitude switches that fix on; clearing it switches the fix off. Hold <strong>⋮⋮</strong> and drag to reorder. Active FAF and MAP rows define the graph.</p>
+        <p class="segment-hint">Entering an altitude switches that fix on; clearing it switches the fix off. Hold <strong>⋮⋮</strong> and drag to reorder. Active FAF and DA/MDA rows define the graph.</p>
 
         <div class="column-labels" aria-hidden="true">
           <span>Use</span><span>Label</span><span>Published altitude</span><span>Order</span><span></span>
@@ -119,7 +128,7 @@
         <div id="emptyState" class="empty-state">
           <div class="radar" aria-hidden="true"><span></span></div>
           <h3>Ready for the cold.</h3>
-          <p>Enter your conditions plus FAF and MAP altitudes to build the corrected final-segment profile.</p>
+          <p>Enter your conditions plus FAF and DA/MDA altitudes to build the corrected final-segment profile.</p>
         </div>
 
         <div id="results" hidden>
@@ -168,7 +177,7 @@
           <section class="chart-card">
             <div class="chart-title">
               <div>
-                <h3>FAF → MAP descent comparison</h3>
+                <h3>FAF → DA/MDA descent comparison</h3>
                 <p>Standard 5.2% profile vs. cold true profile</p>
               </div>
               <div class="legend" aria-label="Chart legend">
@@ -185,6 +194,139 @@
       </div>
     </section>
 
+    <section id="hotWorkspace" class="workspace" aria-label="Hot temperature vertical speed workspace" hidden>
+      <div class="input-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="step">01</span>
+            <h2>Hot conditions</h2>
+          </div>
+          <div class="heading-actions">
+            <button id="loadHotExample" class="text-button" type="button">Load example</button>
+            <button id="clearHot" class="text-button" type="button">Clear data</button>
+          </div>
+        </div>
+        <p class="segment-hint">No altitude correction is needed in hot air for this page. The only question is what the pressure-driven VSI will read for a given true descent.</p>
+        <div class="conditions-grid hot-conditions-grid">
+          <label class="field">
+            <span>Outside air temperature</span>
+            <div class="input-shell">
+              <input id="hotTemperature" type="number" inputmode="decimal" min="0" max="50" step="0.1" placeholder="—">
+              <b>°C</b>
+            </div>
+            <small>OAT, e.g. airport or current OAT. Enter as a positive number.</small>
+          </label>
+          <label class="field">
+            <span>Airport elevation</span>
+            <div class="input-shell">
+              <input id="hotElevation" type="number" inputmode="numeric" min="-1500" max="15000" step="1" placeholder="—">
+              <b>ft MSL</b>
+            </div>
+            <small>Elevation of altimeter source. ISA temperature falls about 1.98°C per 1,000 ft.</small>
+          </label>
+          <label class="field">
+            <span>QNH</span>
+            <div class="input-shell">
+              <input id="hotQnh" type="number" inputmode="decimal" min="900" max="1100" step="1" value="1013" placeholder="—">
+              <b>hPa</b>
+            </div>
+            <small>Local sea-level pressure. Affects air density and therefore TAS.</small>
+          </label>
+          <label class="field">
+            <span>Indicated airspeed</span>
+            <div class="input-shell">
+              <input id="hotIas" type="number" inputmode="decimal" min="1" max="600" step="1" placeholder="—">
+              <b>kt</b>
+            </div>
+            <small>IAS on the final segment</small>
+          </label>
+          <label class="field">
+            <span>Headwind component</span>
+            <div class="input-shell">
+              <input id="hotHeadwind" type="number" inputmode="decimal" min="-200" max="200" step="1" placeholder="—">
+              <b>kt</b>
+            </div>
+            <small>Positive = headwind, negative = tailwind. Groundspeed is calculated, not entered.</small>
+          </label>
+          <label class="field">
+            <span>Glide slope angle</span>
+            <div class="input-shell">
+              <input id="hotAngle" type="number" inputmode="decimal" min="0.5" max="6" step="0.1" value="3" placeholder="—">
+              <b>°</b>
+            </div>
+            <small>Default 3°, adjustable in 0.1° steps</small>
+          </label>
+        </div>
+        <div id="hotValidation" class="validation" role="alert" hidden></div>
+        <button id="calculateHot" class="calculate-button" type="button">
+          <span>Calculate hot VSI</span>
+          <span aria-hidden="true">→</span>
+        </button>
+        <p class="hot-formula-note">Groundspeed is calculated: TAS from IAS using air density at the airport (station pressure from QNH and elevation, actual OAT), then groundspeed = TAS − headwind component. ISA temperature at the airport = 15 − 1.98 × elevation / 1,000 (°C). Temperature ratio = (OAT + 273.15) / (ISA at airport + 273.15). A VSI is a pressure-rate instrument, so indicated rate = true rate / ratio, at the entered glide slope angle.</p>
+      </div>
+
+      <div class="results-panel" aria-live="polite">
+        <div class="panel-heading results-heading">
+          <div>
+            <span class="step">02</span>
+            <h2>Indicated vertical speed</h2>
+          </div>
+          <button id="printHotResults" class="icon-button" type="button" title="Print or save as PDF" aria-label="Print or save results">↗</button>
+        </div>
+
+        <div id="hotEmptyState" class="empty-state">
+          <div class="radar" aria-hidden="true"><span></span></div>
+          <h3>Ready for the heat.</h3>
+          <p>Enter OAT, airport elevation, QNH, IAS, headwind and glide slope angle to compare a true glide path with an uncompensated FMC path.</p>
+        </div>
+
+        <div id="hotResults" hidden>
+          <div class="summary-grid hot-summary-grid">
+            <article class="summary-card">
+              <span>Groundspeed — calculated</span>
+              <strong id="hotGroundspeedOut">—</strong>
+              <small id="hotGroundspeedNote">—</small>
+            </article>
+            <article class="summary-card featured">
+              <span>Geometrical path — indicated VSI</span>
+              <strong id="hotGeoIndicated">—</strong>
+              <small id="hotGeoIndicatedNote">—</small>
+            </article>
+            <article class="summary-card">
+              <span>FMC path without baro-VNAV — indicated VSI</span>
+              <strong id="hotFmcIndicated">—</strong>
+              <small id="hotFmcIndicatedNote">—</small>
+            </article>
+          </div>
+
+          <section class="table-card hot-table">
+            <div class="table-title">
+              <h3>What each path really does</h3>
+              <span id="hotGradientLabel">ENTERED GLIDE SLOPE</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <colgroup><col><col><col><col></colgroup>
+                <thead><tr><th>Path</th><th>Indicated</th><th>True rate</th><th>Angle</th></tr></thead>
+                <tbody>
+                  <tr><td>Geometrical (ILS)</td><td><strong id="hotGeoIndicatedCell">—</strong></td><td id="hotGeoTrueCell">—</td><td id="hotGeoAngleCell">—</td></tr>
+                  <tr><td>FMC, no baro-VNAV</td><td><strong id="hotFmcIndicatedCell">—</strong></td><td id="hotFmcTrueCell">—</td><td id="hotFmcAngleCell">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="vsi-explainer">
+            <span>Reading the difference</span>
+            <strong id="hotDifference">—</strong>
+            <p id="hotDifferenceNote">—</p>
+          </div>
+
+          <div id="hotMethodNote" class="method-note"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="method-section">
       <div>
         <p class="kicker">Method & limitations</p>
@@ -192,8 +334,8 @@
       </div>
       <div class="method-copy">
         <p>The calculator bilinearly interpolates the FAA-published ICAO Cold Temperature Error Table using reported airport temperature and height above airport. Corrections are added to published altitudes; the altimeter setting itself is not changed.</p>
-        <p>The final descent comparison uses only rows labeled FAF and MAP. It derives the nominal distance from their published altitude difference at a 5.2% gradient, then compares that with their cold true-height difference.</p>
-        <p>A VSI is a pressure-rate instrument. For the displayed cold indication, the app converts geometric vertical speed back to barometric vertical speed using the FAF–MAP layer-thickness ratio from the same cold-correction table. This distinguishes the shallower true path from what the cockpit VSI indicates.</p>
+        <p>The final descent comparison uses only rows labeled FAF and DA/MDA (or MAP). It derives the nominal distance from their published altitude difference at a 5.2% gradient, then compares that with their cold true-height difference.</p>
+        <p>A VSI is a pressure-rate instrument. For the displayed cold indication, the app converts geometric vertical speed back to barometric vertical speed using the FAF–DA/MDA layer-thickness ratio from the same cold-correction table. This distinguishes the shallower true path from what the cockpit VSI indicates.</p>
         <p>FAA procedures, applicable state rules, operator policy, chart notes, and ATC instructions always take precedence. Coordinate corrections with ATC where required. Baro-VNAV temperature limits are separate.</p>
         <div class="source-links">
           <a href="https://www.faa.gov/air_traffic/publications/atpubs/aim_html/chap7_section_3.html" target="_blank" rel="noreferrer">FAA cold-temperature guidance ↗</a>
@@ -204,10 +346,10 @@
   </main>
 
   <footer>
-    <span>Cold Altitude Correction</span>
-    <span>Version 1.0.5 · Works offline after first successful load</span>
+    <span>Temperature &amp; Descent Calculator</span>
+    <span>Version 1.0.12 local preview · Works offline after first successful load</span>
   </footer>
 
-  <script src="app.js?v=1.0.5" defer></script>
+  <script src="app.js?v=1.0.12" defer></script>
 </body>
 </html>

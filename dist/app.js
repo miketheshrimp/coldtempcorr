@@ -14,7 +14,7 @@ const exampleRows = [
   ['IF', 5400],
   ['FAF', 4200],
   ['Step-down Fix', 3500],
-  ['MAP / DDA / MDA / DA', 2600],
+  ['DA/MDA', 2600],
   ['GA ALT', 4600],
   ['Holding', 6000],
   ['MSA', 7000]
@@ -27,6 +27,14 @@ const $ = (id) => document.getElementById(id);
 const rowsEl = $('altitudeRows');
 let lastResults = null;
 
+function isMandatoryRowLabel(label) {
+  const text = String(label).trim().toUpperCase();
+  return text === 'FAF' || text === 'DA/MDA' || text === 'MAP' || text === 'MISSED APPROACH POINT';
+}
+function syncMandatoryRow(row) {
+  const label = row.querySelector('.label-input').value;
+  row.classList.toggle('mandatory-row', isMandatoryRowLabel(label));
+}
 function addAltitudeRow(label = '', altitude = '', active = String(altitude).trim() !== '') {
   const row = document.createElement('div');
   row.className = 'altitude-row';
@@ -38,6 +46,9 @@ function addAltitudeRow(label = '', altitude = '', active = String(altitude).tri
     <button class="remove-row" type="button" aria-label="Remove altitude">×</button>`;
   const toggle = row.querySelector('.row-toggle');
   const altitudeInput = row.querySelector('.altitude-input');
+  const labelInput = row.querySelector('.label-input');
+  labelInput.addEventListener('input', () => syncMandatoryRow(row));
+  syncMandatoryRow(row);
   toggle.addEventListener('change', () => row.classList.toggle('is-disabled', !toggle.checked));
   altitudeInput.addEventListener('input', () => {
     toggle.checked = altitudeInput.value.trim() !== '';
@@ -202,11 +213,11 @@ function calculate() {
     });
   if (!tempValue) return showValidation('Enter the airport temperature.');
   if (!elevationValue) return showValidation('Enter the airport elevation.');
-  if (!groundspeedValue) return showValidation('Enter the FAF to MAP groundspeed.');
+  if (!groundspeedValue) return showValidation('Enter the FAF to DA/MDA groundspeed.');
   if (!Number.isFinite(temp) || temp > 0 || temp < -50) return showValidation('Airport temperature must be between 0°C and −50°C.');
   if (!Number.isFinite(elevation) || elevation < -1500 || elevation > 15000) return showValidation('Enter a valid airport elevation between −1,500 and 15,000 ft MSL.');
   if (!Number.isFinite(groundspeed) || groundspeed <= 0 || groundspeed > 600) return showValidation('Enter a groundspeed between 1 and 600 knots.');
-  if (!rows.length) return showValidation('Switch on at least one altitude entry. Active FAF and MAP rows are required for the final-segment analysis.');
+  if (!rows.length) return showValidation('Switch on at least one altitude entry. Active FAF and DA/MDA rows are required for the final-segment analysis.');
   if (rows.some(r => !r.altitudeValue || !Number.isFinite(r.altitude))) return showValidation('Enter a published altitude for every active row.');
   if (rows.some(r => r.altitude < elevation)) return showValidation('Each active procedure altitude must be at or above the airport elevation.');
 
@@ -216,12 +227,12 @@ function calculate() {
     return {...r, height, correction, corrected: r.altitude + correction, trueUncorrected: Math.max(0, height - correction)};
   });
   const faf = computed.find(r => /\bP?FAF\b/i.test(r.label));
-  const map = computed.find(r => /\bMAP\b|missed approach point/i.test(r.label));
-  if (!faf || !map) return showValidation('Label one altitude FAF and one altitude MAP (or “Missed approach point”).');
+  const map = computed.find(r => /\bMAP\b|missed approach point|DA\/MDA|\bDA\b|\bMDA\b/i.test(r.label));
+  if (!faf || !map) return showValidation('Label one altitude FAF and one altitude DA/MDA (or MAP / “Missed approach point”).');
   const publishedDrop = faf.height - map.height;
-  if (publishedDrop <= 0) return showValidation('The FAF altitude must be higher than the MAP altitude.');
+  if (publishedDrop <= 0) return showValidation('The FAF altitude must be higher than the DA/MDA altitude.');
   const trueDrop = faf.trueUncorrected - map.trueUncorrected;
-  if (trueDrop <= 0) return showValidation('The calculated cold true height at FAF must be higher than at MAP.');
+  if (trueDrop <= 0) return showValidation('The calculated cold true height at FAF must be higher than at DA/MDA.');
   const segmentDistanceFt = publishedDrop / STANDARD_GRADIENT;
   const actualGradient = trueDrop / segmentDistanceFt;
   const standardAngle = Math.atan(STANDARD_GRADIENT) * 180 / Math.PI;
@@ -249,8 +260,8 @@ function renderResults(data) {
   $('samePathIndicatedVs').textContent = `${Math.round(data.samePathIndicatedVs)} fpm indicated`;
   $('resultsBody').innerHTML = data.computed.map(r => `<tr><td>${escapeHtml(displayPointLabel(r.label))}</td><td>${formatFt(r.altitude)}</td><td>+${Math.round(r.correction)} ft</td><td><strong>${formatCorrectedAltitude(r)}</strong></td></tr>`).join('');
   const extrapolated = data.computed.some(r => r.height > 5000);
-  $('methodNote').innerHTML = `<strong>Calculation note:</strong> Switched-off rows are excluded entirely from validation, calculations, output, and FAF–MAP analysis. Values are interpolated from the FAA/ICAO table and shown to the nearest foot. ${extrapolated ? 'One or more points exceed 5,000 ft AAE; those values use a linear extension of the final table interval, which the FAA permits as an optional extrapolation method. ' : ''}The VSI estimate uses a table-derived average FAF–MAP layer factor of ${data.layerScale.toFixed(4)}. Exact aircraft indication can differ because of the real temperature/virtual-temperature profile, static-system and ADC calibration, instrument lag, and local pressure structure. Operational guidance always takes precedence.`;
-  $('chartNarrative').textContent = `From FAF to MAP at ${data.temp} degrees Celsius, the cold true descent gradient is ${(data.actualGradient*100).toFixed(2)} percent or ${data.actualAngle.toFixed(2)} degrees. At ${data.groundspeed} knots, standard vertical speed is ${Math.round(data.standardVs)} feet per minute, cold geometric vertical speed is ${Math.round(data.actualVs)} feet per minute, and the pressure-derived cockpit VSI indication is ${Math.round(data.indicatedVs)} feet per minute.`;
+  $('methodNote').innerHTML = `<strong>Calculation note:</strong> Switched-off rows are excluded entirely from validation, calculations, output, and FAF–DA/MDA analysis. Values are interpolated from the FAA/ICAO table and shown to the nearest foot. ${extrapolated ? 'One or more points exceed 5,000 ft AAE; those values use a linear extension of the final table interval, which the FAA permits as an optional extrapolation method. ' : ''}The VSI estimate uses a table-derived average FAF–DA/MDA layer factor of ${data.layerScale.toFixed(4)}. Exact aircraft indication can differ because of the real temperature/virtual-temperature profile, static-system and ADC calibration, instrument lag, and local pressure structure. Operational guidance always takes precedence.`;
+  $('chartNarrative').textContent = `From FAF to DA/MDA at ${data.temp} degrees Celsius, the cold true descent gradient is ${(data.actualGradient*100).toFixed(2)} percent or ${data.actualAngle.toFixed(2)} degrees. At ${data.groundspeed} knots, standard vertical speed is ${Math.round(data.standardVs)} feet per minute, cold geometric vertical speed is ${Math.round(data.actualVs)} feet per minute, and the pressure-derived cockpit VSI indication is ${Math.round(data.indicatedVs)} feet per minute.`;
   requestAnimationFrame(() => drawChart(data));
   if (window.innerWidth >= 641 && window.innerWidth < 1000) $('results').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
@@ -310,6 +321,111 @@ function drawChart(data) {
   ctx.fillStyle=coldColor; ctx.textAlign='left'; ctx.fillText(`${(data.actualGradient*100).toFixed(2)}% / ${data.actualAngle.toFixed(2)}° cold`,pad.l+8,h-pad.b-8);
 }
 
+/* ---- Hot temperature VSI mode (local preview, no altitude correction) ---- */
+function setMode(mode) {
+  const isHot = mode === 'hot';
+  $('coldWorkspace').hidden = isHot;
+  $('hotWorkspace').hidden = !isHot;
+  $('modeCold').classList.toggle('is-active', !isHot);
+  $('modeHot').classList.toggle('is-active', isHot);
+  $('modeCold').setAttribute('aria-selected', String(!isHot));
+  $('modeHot').setAttribute('aria-selected', String(isHot));
+  if (isHot) {
+    $('heroTitle').innerHTML = 'See what hot air<br><em>does to your VSI.</em>';
+    $('heroCopy').textContent = 'No altitude correction in hot air — just the difference between a true 3° path and an uncompensated FMC baro path, in indicated feet per minute.';
+  } else {
+    $('heroTitle').innerHTML = 'See the altitude<br><em>cold air takes away.</em>';
+    $('heroCopy').textContent = 'Calculate indicated altitude corrections and visualize how an uncompensated 3° barometric descent becomes shallower in below-zero conditions.';
+  }
+}
+function showHotValidation(message) { $('hotValidation').textContent = message; $('hotValidation').hidden = false; }
+function clearHotValidation() { $('hotValidation').hidden = true; }
+function calculateHot() {
+  clearHotValidation();
+  const oatValue = $('hotTemperature').value.trim();
+  const elevValue = $('hotElevation').value.trim();
+  const qnhValue = $('hotQnh').value.trim();
+  const iasValue = $('hotIas').value.trim();
+  const headwindValue = $('hotHeadwind').value.trim();
+  const angleValue = $('hotAngle').value.trim();
+  const oat = Number(oatValue);
+  const elevation = Number(elevValue);
+  const qnh = Number(qnhValue);
+  const ias = Number(iasValue);
+  const headwind = Number(headwindValue);
+  const angleDeg = Number(angleValue);
+  if (!oatValue) return showHotValidation('Enter the outside air temperature.');
+  if (!elevValue) return showHotValidation('Enter the airport elevation.');
+  if (!qnhValue) return showHotValidation('Enter the QNH.');
+  if (!iasValue) return showHotValidation('Enter the indicated airspeed.');
+  if (headwindValue === '') return showHotValidation('Enter the headwind component (0 if calm, negative for a tailwind).');
+  if (!angleValue) return showHotValidation('Enter the glide slope angle.');
+  if (!Number.isFinite(oat) || oat < 0 || oat > 50) return showHotValidation('OAT must be between 0°C and 50°C for this hot-temperature page.');
+  if (!Number.isFinite(elevation) || elevation < -1500 || elevation > 15000) return showHotValidation('Enter a valid airport elevation between −1,500 and 15,000 ft MSL.');
+  if (!Number.isFinite(qnh) || qnh < 900 || qnh > 1100) return showHotValidation('Enter a QNH between 900 and 1,100 hPa.');
+  if (!Number.isFinite(ias) || ias <= 0 || ias > 600) return showHotValidation('Enter an IAS between 1 and 600 knots.');
+  if (!Number.isFinite(headwind) || headwind < -200 || headwind > 200) return showHotValidation('Enter a headwind component between −200 and 200 knots (negative = tailwind).');
+  if (!Number.isFinite(angleDeg) || angleDeg < 0.5 || angleDeg > 6) return showHotValidation('Enter a glide slope angle between 0.5° and 6°.');
+  // Groundspeed, calculated (not entered): IAS -> TAS -> GS.
+  // TAS from density ratio, low-speed approximation: TAS = IAS / sqrt(sigma), sigma = rho / rho0.
+  // rho/rho0 = (p/p0) x (T0/T), with station pressure p from QNH and elevation using the ISA
+  // pressure formula scaled by QNH: p/p0 = (QNH/1013.25) x (1 - 0.0065 x elev_m / 288.15)^5.25588.
+  // This is the altimeter-consistent station pressure for that QNH. T = OAT in kelvin.
+  // Compressibility and instrument/position error are ignored, so TAS is a planning estimate,
+  // not a flight-manual value.
+  const elevM = elevation * 0.3048;
+  const pressureRatio = (qnh / 1013.25) * Math.pow(1 - 0.0065 * elevM / 288.15, 5.25588);
+  const sigma = pressureRatio * (288.15 / (oat + 273.15));
+  const tas = ias / Math.sqrt(sigma);
+  const groundspeed = tas - headwind; // headwind positive reduces GS; tailwind (negative) increases it
+  if (!Number.isFinite(groundspeed) || groundspeed <= 0) return showHotValidation('The calculated groundspeed is not positive — check IAS and headwind component.');
+  // Pressure-rate VSI model: indicated rate = true rate x (ISA absolute temp / actual absolute temp).
+  // ISA temperature falls with altitude at the standard lapse rate, 1.98°C per 1,000 ft, so the
+  // ISA temperature that matters is the one at the airport, not sea level: ISA = 15 - 1.98 x elev/1000.
+  // OAT is the airport temperature. For a low-altitude final segment, if actual and ISA temperatures
+  // lapse at roughly the same rate, this airport-surface ratio is close to the layer ratio above the airport.
+  const isaAtAirport = 15 - 1.98 * elevation / 1000;
+  const ratio = (oat + 273.15) / (isaAtAirport + 273.15); // true feet per indicated foot
+  const gradient = Math.tan(angleDeg * Math.PI / 180);
+  const nominalVs = groundspeed * FEET_PER_MINUTE_PER_KNOT * gradient;
+  const geoIndicatedVs = nominalVs / ratio; // flying a true geometrical glide path
+  const fmcIndicatedVs = nominalVs; // FMC baro path is at the entered angle in indicated altitude, by definition
+  const fmcTrueVs = nominalVs * ratio; // what that baro path really does in hot air
+  const fmcAngle = Math.atan(gradient * ratio) * 180 / Math.PI;
+  const geoPct = (1 / ratio - 1) * 100;
+  $('hotEmptyState').hidden = true;
+  $('hotResults').hidden = false;
+  $('hotGroundspeedOut').textContent = `${Math.round(groundspeed)} kt`;
+  $('hotGroundspeedNote').textContent = `TAS ${Math.round(tas)} kt − headwind ${Math.round(headwind)} kt`;
+  $('hotGeoIndicated').textContent = `${Math.round(geoIndicatedVs)} fpm`;
+  $('hotGeoIndicatedNote').textContent = `true rate ${Math.round(nominalVs)} fpm · reads ${Math.abs(geoPct).toFixed(1)}% ${geoPct < 0 ? 'lower' : 'higher'} than true rate`;
+  $('hotFmcIndicated').textContent = `${Math.round(fmcIndicatedVs)} fpm`;
+  $('hotFmcIndicatedNote').textContent = `same as nominal ${angleDeg.toFixed(1)}° rate at ${Math.round(groundspeed)} kt GS`;
+  $('hotGradientLabel').textContent = `${angleDeg.toFixed(1)}° GLIDE SLOPE · ${(gradient * 100).toFixed(2)}% GRADIENT`;
+  $('hotGeoIndicatedCell').textContent = `${Math.round(geoIndicatedVs)} fpm`;
+  $('hotGeoTrueCell').textContent = `${Math.round(nominalVs)} fpm`;
+  $('hotGeoAngleCell').textContent = `${angleDeg.toFixed(1)}°`;
+  $('hotFmcIndicatedCell').textContent = `${Math.round(fmcIndicatedVs)} fpm`;
+  $('hotFmcTrueCell').textContent = `${Math.round(fmcTrueVs)} fpm`;
+  $('hotFmcAngleCell').textContent = `${fmcAngle.toFixed(2)}°`;
+  const diff = Math.round(fmcIndicatedVs - geoIndicatedVs);
+  $('hotDifference').textContent = `${Math.abs(diff)} fpm apart`;
+  $('hotDifferenceNote').textContent = diff >= 0
+    ? `At ${oat}°C, ${Math.round(elevation).toLocaleString()} ft elevation, IAS ${Math.round(ias)} kt and headwind ${Math.round(headwind)} kt (GS ${Math.round(groundspeed)} kt), the FMC baro path shows ${Math.round(fmcIndicatedVs)} fpm indicated, ${Math.abs(diff)} fpm higher than the ${Math.round(geoIndicatedVs)} fpm you would see flying a true geometrical ${angleDeg.toFixed(1)}° path. Following the FMC path, your true descent is ${Math.round(fmcTrueVs)} fpm at a true angle of ${fmcAngle.toFixed(2)}°, steeper than ${angleDeg.toFixed(1)}°.`
+    : `At ${oat}°C, ${Math.round(elevation).toLocaleString()} ft elevation, IAS ${Math.round(ias)} kt and headwind ${Math.round(headwind)} kt (GS ${Math.round(groundspeed)} kt), the FMC baro path shows ${Math.round(fmcIndicatedVs)} fpm indicated, ${Math.abs(diff)} fpm lower than the ${Math.round(geoIndicatedVs)} fpm you would see flying a true geometrical ${angleDeg.toFixed(1)}° path.`;
+  $('hotMethodNote').innerHTML = `<strong>Calculation note:</strong> ISA temperature at ${Math.round(elevation).toLocaleString()} ft is ${isaAtAirport.toFixed(1)}°C, so the temperature ratio is ${(ratio).toFixed(4)} at ${oat}°C vs that ISA temperature. TAS ${Math.round(tas)} kt is IAS ${Math.round(ias)} kt corrected for density ratio ${sigma.toFixed(4)} at the airport (station pressure ratio ${pressureRatio.toFixed(4)} from QNH ${Math.round(qnh)} hPa and elevation); groundspeed is TAS minus headwind component. Geometrical path: indicated = nominal / ratio. FMC path without baro-VNAV: indicated = nominal, because the FMC path is at the entered angle in barometric altitude; its true rate is nominal × ratio. This is an estimate: TAS ignores compressibility and instrument/position error, and the VSI indication depends on the real temperature profile through the layer, static-system and ADC calibration, and instrument lag. No altitude correction is applied on this page — in hot air true altitude is higher than indicated, so obstacle clearance is not reduced by temperature. Operational guidance, chart notes, and ATC instructions always take precedence.`;
+}
+$('modeCold').addEventListener('click', () => setMode('cold'));
+$('modeHot').addEventListener('click', () => setMode('hot'));
+$('calculateHot').addEventListener('click', calculateHot);
+$('loadHotExample').addEventListener('click', () => { $('hotTemperature').value = 35; $('hotElevation').value = 5000; $('hotQnh').value = 1013; $('hotIas').value = 140; $('hotHeadwind').value = 10; $('hotAngle').value = 3; clearHotValidation(); });
+$('clearHot').addEventListener('click', () => {
+  $('hotTemperature').value = ''; $('hotElevation').value = ''; $('hotQnh').value = 1013;
+  $('hotIas').value = ''; $('hotHeadwind').value = ''; $('hotAngle').value = 3;
+  clearHotValidation(); $('hotEmptyState').hidden = false; $('hotResults').hidden = true;
+});
+$('printHotResults').addEventListener('click', () => window.print());
+
 initialRows.forEach(([label, altitude]) => addAltitudeRow(label, altitude));
 $('themeToggle').addEventListener('click', () => {
   const nextTheme = document.documentElement.dataset.theme === 'night' ? 'day' : 'night';
@@ -355,6 +471,11 @@ $('temperature').addEventListener('input', event => {
 $('loadExample').addEventListener('click', () => {
   $('temperature').value = -20; $('elevation').value = 1200; $('groundspeed').value = 120; rowsEl.innerHTML=''; exampleRows.forEach(([l,a])=>addAltitudeRow(l,a)); clearValidation();
 });
+$('clearCold').addEventListener('click', () => {
+  $('temperature').value = ''; $('elevation').value = ''; $('groundspeed').value = '';
+  rowsEl.innerHTML=''; initialRows.forEach(([l,a])=>addAltitudeRow(l,a));
+  clearValidation(); lastResults = null; $('emptyState').hidden = false; $('results').hidden = true;
+});
 $('printResults').addEventListener('click', () => window.print());
 window.addEventListener('resize', () => { if (lastResults) drawChart(lastResults); });
 
@@ -372,3 +493,67 @@ async function setupOffline() {
 window.addEventListener('online', () => { $('offlineStatus').classList.remove('offline'); $('offlineStatus').querySelector('span').textContent='Offline ready'; });
 window.addEventListener('offline', () => { $('offlineStatus').classList.add('offline'); $('offlineStatus').querySelector('span').textContent='Running offline'; });
 setupOffline();
+
+/* ---- Update button: the pill right of the Day/Night toggle ---- */
+/* Why the old version stuck: the service worker serves the cached page first, so a plain */
+/* reload can keep showing the old cached copy. This button explicitly asks the browser */
+/* for a new service worker and only reloads when one has taken over. It never clears the */
+/* offline cache when you are offline or already up to date, so it cannot break offline use. */
+let updateReloading = false;
+async function checkForUpdate() {
+  const status = $('offlineStatus');
+  const label = status.querySelector('span');
+  const original = label.textContent;
+  if (!('serviceWorker' in navigator)) { window.location.reload(); return; }
+  if (!navigator.onLine) {
+    label.textContent = 'Offline — update needs internet';
+    setTimeout(() => { label.textContent = 'Running offline'; }, 2500);
+    return;
+  }
+  label.textContent = 'Checking for update…';
+  status.disabled = true;
+  const restoreUpToDate = () => {
+    label.textContent = 'Up to date';
+    status.disabled = false;
+    setTimeout(() => { label.textContent = navigator.onLine ? 'Offline ready' : 'Running offline'; }, 2500);
+  };
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) { window.location.reload(); return; }
+    // Listen first, so we catch the new worker taking over even if it activates immediately.
+    const onControllerChange = () => {
+      if (updateReloading) return;
+      updateReloading = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+    await reg.update();
+    if (reg.waiting) {
+      label.textContent = 'Updating…';
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      // Fallback if controllerchange does not fire (e.g. first activation edge case).
+      setTimeout(() => { if (!updateReloading) { updateReloading = true; window.location.reload(); } }, 2500);
+      return;
+    }
+    if (reg.installing) {
+      label.textContent = 'Updating…';
+      reg.installing.addEventListener('statechange', () => {
+        if (reg.installing && reg.installing.state === 'activated' && !updateReloading) {
+          updateReloading = true;
+          window.location.reload();
+        }
+      });
+      setTimeout(() => { if (!updateReloading) { updateReloading = true; window.location.reload(); } }, 4000);
+      return;
+    }
+    // No new worker: the service-worker file is unchanged, so this is the latest version.
+    // Do not clear caches and do not reload — that would only lose the current inputs.
+    navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+    restoreUpToDate();
+  } catch {
+    label.textContent = 'Update check failed';
+    status.disabled = false;
+    setTimeout(() => { label.textContent = original; }, 3000);
+  }
+}
+$('offlineStatus').addEventListener('click', checkForUpdate);
