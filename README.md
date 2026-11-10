@@ -1,6 +1,6 @@
 # Temperature & Descent Calculator — 温度与下降计算器
 
-**Version 1.1 · Live apps:** [rack.228311.xyz:49173](https://rack.228311.xyz:49173/) · [tool.228311.xyz:49173](https://tool.228311.xyz:49173/)
+**Version 1.1.1 · Live apps:** [rack.228311.xyz:49173](https://rack.228311.xyz:49173/) · [tool.228311.xyz:49173](https://tool.228311.xyz:49173/)
 
 > [!CAUTION]
 > This is a planning and educational tool, not approved navigation equipment. Always follow the current procedure, applicable authority guidance, aircraft and operator limitations, chart notes, and ATC instructions. Independently verify every operational value before use.
@@ -35,7 +35,7 @@ The app has two modes, switched at the top of the page: **Cold correction** (低
 
 ### 高温模式：功能与使用
 
-输入范围：OAT 0–50°C；机场标高 −1,500 至 15,000 英尺；QNH 900–1,100 hPa（默认 1013）；IAS 1–600 节；顶风分量 −200 至 200 节（正为顶风，负为顺风）；下滑角 0.5–6°（默认 3.0°，以 0.1° 为步长）。
+输入范围：OAT −50 至 50°C（输入数值后点 +/− 切换正负，零下也可以查垂直速度）；机场标高 −1,500 至 15,000 英尺；QNH 900–1,100 hPa（默认 1013）；IAS 1–600 节；顶风/顺风分量 0–200 节（点 HW/TW 切换顶风或顺风，iPhone 数字键盘没有负号，所以符号用按钮）；下滑角 0.5–6°（默认 3.0°，以 0.1° 为步长）。
 
 1. 输入 OAT、机场标高、QNH、IAS、顶风分量和下滑角。
 2. 选择 **Calculate**。地速是输出，不是输入。
@@ -88,7 +88,7 @@ Results show, for each active point, height above airport elevation, correction 
 
 ### Hot mode: features and use
 
-Input ranges: OAT 0–50°C; airport elevation −1,500 to 15,000 ft; QNH 900–1,100 hPa (default 1013); IAS 1–600 kt; headwind component −200 to 200 kt (positive = headwind, negative = tailwind); glide slope angle 0.5–6° (default 3.0°, in 0.1° steps).
+Input ranges: OAT −50 to 50°C (type the number, then tap +/− for a below-zero OAT — useful for checking vertical speed in cold air too); airport elevation −1,500 to 15,000 ft; QNH 900–1,100 hPa (default 1013); IAS 1–600 kt; headwind/tailwind component 0–200 kt (tap HW/TW to switch — the iPhone numeric keyboard has no minus key, so the sign is a button); glide slope angle 0.5–6° (default 3.0°, in 0.1° steps).
 
 1. Enter OAT, airport elevation, QNH, IAS, headwind component, and glide slope angle.
 2. Select **Calculate**. Groundspeed is an output, not an input.

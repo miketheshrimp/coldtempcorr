@@ -340,6 +340,15 @@ function setMode(mode) {
 }
 function showHotValidation(message) { $('hotValidation').textContent = message; $('hotValidation').hidden = false; }
 function clearHotValidation() { $('hotValidation').hidden = true; }
+// Sign toggles: iOS numeric keyboards have no minus key, so the sign lives on a
+// button, not in the typed number. Both fields take a magnitude (0 and up);
+// the button supplies the sign. Hot OAT defaults to +, headwind defaults to HW.
+let hotTempNegative = false;
+let hotHeadwindTailwind = false;
+function syncHotTempSign() { const b = $('hotTempSign'); b.textContent = hotTempNegative ? '−' : '+'; b.setAttribute('aria-pressed', String(hotTempNegative)); }
+function syncHotHeadwindSign() { const b = $('hotHeadwindSign'); b.textContent = hotHeadwindTailwind ? 'TW' : 'HW'; b.setAttribute('aria-pressed', String(hotHeadwindTailwind)); }
+$('hotTempSign').addEventListener('click', () => { hotTempNegative = !hotTempNegative; syncHotTempSign(); });
+$('hotHeadwindSign').addEventListener('click', () => { hotHeadwindTailwind = !hotHeadwindTailwind; syncHotHeadwindSign(); });
 function calculateHot() {
   clearHotValidation();
   const oatValue = $('hotTemperature').value.trim();
@@ -348,23 +357,23 @@ function calculateHot() {
   const iasValue = $('hotIas').value.trim();
   const headwindValue = $('hotHeadwind').value.trim();
   const angleValue = $('hotAngle').value.trim();
-  const oat = Number(oatValue);
+  const oat = (hotTempNegative ? -1 : 1) * Number(oatValue);
   const elevation = Number(elevValue);
   const qnh = Number(qnhValue);
   const ias = Number(iasValue);
-  const headwind = Number(headwindValue);
+  const headwind = (hotHeadwindTailwind ? -1 : 1) * Number(headwindValue);
   const angleDeg = Number(angleValue);
   if (!oatValue) return showHotValidation('Enter the outside air temperature.');
   if (!elevValue) return showHotValidation('Enter the airport elevation.');
   if (!qnhValue) return showHotValidation('Enter the QNH.');
   if (!iasValue) return showHotValidation('Enter the indicated airspeed.');
-  if (headwindValue === '') return showHotValidation('Enter the headwind component (0 if calm, negative for a tailwind).');
+  if (headwindValue === '') return showHotValidation('Enter the headwind component (0 if calm, tap TW for a tailwind).');
   if (!angleValue) return showHotValidation('Enter the glide slope angle.');
-  if (!Number.isFinite(oat) || oat < 0 || oat > 50) return showHotValidation('OAT must be between 0°C and 50°C for this hot-temperature page.');
+  if (!Number.isFinite(oat) || oat < -50 || oat > 50) return showHotValidation('OAT must be between −50°C and 50°C for this page (tap +/− for a below-zero OAT).');
   if (!Number.isFinite(elevation) || elevation < -1500 || elevation > 15000) return showHotValidation('Enter a valid airport elevation between −1,500 and 15,000 ft MSL.');
   if (!Number.isFinite(qnh) || qnh < 900 || qnh > 1100) return showHotValidation('Enter a QNH between 900 and 1,100 hPa.');
   if (!Number.isFinite(ias) || ias <= 0 || ias > 600) return showHotValidation('Enter an IAS between 1 and 600 knots.');
-  if (!Number.isFinite(headwind) || headwind < -200 || headwind > 200) return showHotValidation('Enter a headwind component between −200 and 200 knots (negative = tailwind).');
+  if (!Number.isFinite(headwind) || headwind < -200 || headwind > 200) return showHotValidation('Enter a headwind/tailwind component between 0 and 200 knots.');
   if (!Number.isFinite(angleDeg) || angleDeg < 0.5 || angleDeg > 6) return showHotValidation('Enter a glide slope angle between 0.5° and 6°.');
   // Groundspeed, calculated (not entered): IAS -> TAS -> GS.
   // TAS from density ratio, low-speed approximation: TAS = IAS / sqrt(sigma), sigma = rho / rho0.
@@ -393,10 +402,11 @@ function calculateHot() {
   const fmcTrueVs = nominalVs * ratio; // what that baro path really does in hot air
   const fmcAngle = Math.atan(gradient * ratio) * 180 / Math.PI;
   const geoPct = (1 / ratio - 1) * 100;
+  const windPhrase = headwind >= 0 ? `headwind ${Math.round(headwind)} kt` : `tailwind ${Math.round(-headwind)} kt`;
   $('hotEmptyState').hidden = true;
   $('hotResults').hidden = false;
   $('hotGroundspeedOut').textContent = `${Math.round(groundspeed)} kt`;
-  $('hotGroundspeedNote').textContent = `TAS ${Math.round(tas)} kt − headwind ${Math.round(headwind)} kt`;
+  $('hotGroundspeedNote').textContent = `TAS ${Math.round(tas)} kt ${headwind >= 0 ? '− headwind' : '+ tailwind'} ${Math.round(Math.abs(headwind))} kt`;
   $('hotGeoIndicated').textContent = `${Math.round(geoIndicatedVs)} fpm`;
   $('hotGeoIndicatedNote').textContent = `true rate ${Math.round(nominalVs)} fpm · reads ${Math.abs(geoPct).toFixed(1)}% ${geoPct < 0 ? 'lower' : 'higher'} than true rate`;
   $('hotFmcIndicated').textContent = `${Math.round(fmcIndicatedVs)} fpm`;
@@ -411,17 +421,18 @@ function calculateHot() {
   const diff = Math.round(fmcIndicatedVs - geoIndicatedVs);
   $('hotDifference').textContent = `${Math.abs(diff)} fpm apart`;
   $('hotDifferenceNote').textContent = diff >= 0
-    ? `At ${oat}°C, ${Math.round(elevation).toLocaleString()} ft elevation, IAS ${Math.round(ias)} kt and headwind ${Math.round(headwind)} kt (GS ${Math.round(groundspeed)} kt), the FMC baro path shows ${Math.round(fmcIndicatedVs)} fpm indicated, ${Math.abs(diff)} fpm higher than the ${Math.round(geoIndicatedVs)} fpm you would see flying a true geometrical ${angleDeg.toFixed(1)}° path. Following the FMC path, your true descent is ${Math.round(fmcTrueVs)} fpm at a true angle of ${fmcAngle.toFixed(2)}°, steeper than ${angleDeg.toFixed(1)}°.`
-    : `At ${oat}°C, ${Math.round(elevation).toLocaleString()} ft elevation, IAS ${Math.round(ias)} kt and headwind ${Math.round(headwind)} kt (GS ${Math.round(groundspeed)} kt), the FMC baro path shows ${Math.round(fmcIndicatedVs)} fpm indicated, ${Math.abs(diff)} fpm lower than the ${Math.round(geoIndicatedVs)} fpm you would see flying a true geometrical ${angleDeg.toFixed(1)}° path.`;
+    ? `At ${oat}°C, ${Math.round(elevation).toLocaleString()} ft elevation, IAS ${Math.round(ias)} kt and ${windPhrase} (GS ${Math.round(groundspeed)} kt), the FMC baro path shows ${Math.round(fmcIndicatedVs)} fpm indicated, ${Math.abs(diff)} fpm higher than the ${Math.round(geoIndicatedVs)} fpm you would see flying a true geometrical ${angleDeg.toFixed(1)}° path. Following the FMC path, your true descent is ${Math.round(fmcTrueVs)} fpm at a true angle of ${fmcAngle.toFixed(2)}°, steeper than ${angleDeg.toFixed(1)}°.`
+    : `At ${oat}°C, ${Math.round(elevation).toLocaleString()} ft elevation, IAS ${Math.round(ias)} kt and ${windPhrase} (GS ${Math.round(groundspeed)} kt), the FMC baro path shows ${Math.round(fmcIndicatedVs)} fpm indicated, ${Math.abs(diff)} fpm lower than the ${Math.round(geoIndicatedVs)} fpm you would see flying a true geometrical ${angleDeg.toFixed(1)}° path.`;
   $('hotMethodNote').innerHTML = `<strong>Calculation note:</strong> ISA temperature at ${Math.round(elevation).toLocaleString()} ft is ${isaAtAirport.toFixed(1)}°C, so the temperature ratio is ${(ratio).toFixed(4)} at ${oat}°C vs that ISA temperature. TAS ${Math.round(tas)} kt is IAS ${Math.round(ias)} kt corrected for density ratio ${sigma.toFixed(4)} at the airport (station pressure ratio ${pressureRatio.toFixed(4)} from QNH ${Math.round(qnh)} hPa and elevation); groundspeed is TAS minus headwind component. Geometrical path: indicated = nominal / ratio. FMC path without baro-VNAV: indicated = nominal, because the FMC path is at the entered angle in barometric altitude; its true rate is nominal × ratio. This is an estimate: TAS ignores compressibility and instrument/position error, and the VSI indication depends on the real temperature profile through the layer, static-system and ADC calibration, and instrument lag. No altitude correction is applied on this page — in hot air true altitude is higher than indicated, so obstacle clearance is not reduced by temperature. Operational guidance, chart notes, and ATC instructions always take precedence.`;
 }
 $('modeCold').addEventListener('click', () => setMode('cold'));
 $('modeHot').addEventListener('click', () => setMode('hot'));
 $('calculateHot').addEventListener('click', calculateHot);
-$('loadHotExample').addEventListener('click', () => { $('hotTemperature').value = 35; $('hotElevation').value = 5000; $('hotQnh').value = 1013; $('hotIas').value = 140; $('hotHeadwind').value = 10; $('hotAngle').value = 3; clearHotValidation(); });
+$('loadHotExample').addEventListener('click', () => { $('hotTemperature').value = 35; $('hotElevation').value = 5000; $('hotQnh').value = 1013; $('hotIas').value = 140; $('hotHeadwind').value = 10; $('hotAngle').value = 3; hotTempNegative = false; hotHeadwindTailwind = false; syncHotTempSign(); syncHotHeadwindSign(); clearHotValidation(); });
 $('clearHot').addEventListener('click', () => {
   $('hotTemperature').value = ''; $('hotElevation').value = ''; $('hotQnh').value = 1013;
   $('hotIas').value = ''; $('hotHeadwind').value = ''; $('hotAngle').value = 3;
+  hotTempNegative = false; hotHeadwindTailwind = false; syncHotTempSign(); syncHotHeadwindSign();
   clearHotValidation(); $('hotEmptyState').hidden = false; $('hotResults').hidden = true;
 });
 $('printHotResults').addEventListener('click', () => window.print());

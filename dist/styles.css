@@ -104,6 +104,8 @@ h1 em { color: var(--ice); font-style: normal; font-weight: 400; }
 .input-shell:focus-within { border-color: #7c9b1c; box-shadow: 0 0 0 3px rgba(216,255,79,.35); }
 .input-shell input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; padding: 0 4px 0 15px; font-size: 22px; font-weight: 720; color: var(--form-text); }
 .input-shell b { color: var(--form-muted); white-space: nowrap; padding-right: 13px; font-size: 11px; }
+.sign-toggle { flex: 0 0 auto; min-width: 38px; height: 34px; margin-left: 8px; border: 1px solid var(--field-border); border-radius: 9px; background: transparent; color: var(--form-text); font-size: 13px; font-weight: 750; padding: 0 8px; }
+.sign-toggle[aria-pressed="true"] { background: var(--calculate-bg); color: var(--calculate-text); border-color: transparent; }
 .altitude-heading { padding: 36px 0 18px; }
 .segment-hint { margin: -7px 0 17px; color: var(--form-muted); font-size: 10px; line-height: 1.5; }
 .segment-hint strong { color: var(--form-text); }
@@ -259,6 +261,7 @@ html[data-theme="day"] .mandatory-note { color: #8a6400; }
   .input-shell { min-height: 38px; border-radius: 9px; }
   .input-shell input { padding-left: 9px; font-size: 16px; }
   .input-shell b { padding-right: 7px; font-size: 8px; }
+  .sign-toggle { min-width: 30px; height: 28px; margin-left: 6px; border-radius: 7px; font-size: 11px; padding: 0 5px; }
   .altitude-heading { padding: 8px 0 5px; }
   .segment-hint, .column-labels { display: none; }
   .count-label { font-size: 9px; }
@@ -334,6 +337,7 @@ html[data-theme="day"] .mandatory-note { color: #8a6400; }
   html[data-preview="phone"] .input-shell { min-height: 38px; border-radius: 9px; }
   html[data-preview="phone"] .input-shell input { padding-left: 9px; font-size: 16px; }
   html[data-preview="phone"] .input-shell b { padding-right: 7px; font-size: 8px; }
+  html[data-preview="phone"] .sign-toggle { min-width: 30px; height: 28px; margin-left: 6px; border-radius: 7px; font-size: 11px; padding: 0 5px; }
   html[data-preview="phone"] .altitude-heading { padding: 8px 0 5px; }
   html[data-preview="phone"] .altitude-rows { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 4px 6px; }
   html[data-preview="phone"] .altitude-row { grid-template-columns: minmax(0,1fr) 68px 20px 15px; gap: 3px; }
