@@ -1,5 +1,5 @@
-const CACHE = 'cold-altitude-v32';
-const ASSETS = ['./', './index.html', './styles.css', './app.js?v=1.1.1', './manifest.webmanifest', './icon.svg'];
+const CACHE = 'cold-altitude-v33';
+const ASSETS = ['./', './index.html', './styles.css', './app.js?v=1.2', './manifest.webmanifest', './icon.svg'];
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });

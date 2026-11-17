@@ -159,6 +159,12 @@ function escapeHtml(value) {
 function updateRowCount() { $('rowCount').textContent = rowsEl.children.length; }
 function showValidation(message) { $('validation').textContent = message; $('validation').hidden = false; }
 function clearValidation() { $('validation').hidden = true; }
+// Cold headwind sign toggle, same pattern as the Hot page: iOS numeric keyboards
+// have no minus key, so the field takes a magnitude (0–200 kt) and this button
+// supplies the sign. HW (default) = headwind, TW = tailwind.
+let coldHeadwindTailwind = false;
+function syncColdHeadwindSign() { const b = $('coldHeadwindSign'); b.textContent = coldHeadwindTailwind ? 'TW' : 'HW'; b.setAttribute('aria-pressed', String(coldHeadwindTailwind)); }
+$('coldHeadwindSign').addEventListener('click', () => { coldHeadwindTailwind = !coldHeadwindTailwind; syncColdHeadwindSign(); });
 
 function bracket(value, points) {
   if (value <= points[0]) return [points[0], points[1]];
@@ -197,10 +203,16 @@ function calculate() {
   clearValidation();
   const tempValue = $('temperature').value.trim();
   const elevationValue = $('elevation').value.trim();
-  const groundspeedValue = $('groundspeed').value.trim();
+  const qnhValue = $('coldQnh').value.trim();
+  const iasValue = $('coldIas').value.trim();
+  const headwindValue = $('coldHeadwind').value.trim();
+  const angleValue = $('coldAngle').value.trim();
   const temp = Number(tempValue);
   const elevation = Number(elevationValue);
-  const groundspeed = Number(groundspeedValue);
+  const qnh = Number(qnhValue);
+  const ias = Number(iasValue);
+  const headwind = (coldHeadwindTailwind ? -1 : 1) * Number(headwindValue);
+  const angleDeg = Number(angleValue);
   const rows = [...rowsEl.querySelectorAll('.altitude-row')]
     .filter(row => row.querySelector('.row-toggle').checked)
     .map((row, i) => {
@@ -213,10 +225,16 @@ function calculate() {
     });
   if (!tempValue) return showValidation('Enter the airport temperature.');
   if (!elevationValue) return showValidation('Enter the airport elevation.');
-  if (!groundspeedValue) return showValidation('Enter the FAF to DA/MDA groundspeed.');
+  if (!qnhValue) return showValidation('Enter the QNH.');
+  if (!iasValue) return showValidation('Enter the indicated airspeed.');
+  if (headwindValue === '') return showValidation('Enter the headwind component (0 if calm, tap TW for a tailwind).');
+  if (!angleValue) return showValidation('Select the glide slope angle.');
   if (!Number.isFinite(temp) || temp > 0 || temp < -50) return showValidation('Airport temperature must be between 0°C and −50°C.');
   if (!Number.isFinite(elevation) || elevation < -1500 || elevation > 15000) return showValidation('Enter a valid airport elevation between −1,500 and 15,000 ft MSL.');
-  if (!Number.isFinite(groundspeed) || groundspeed <= 0 || groundspeed > 600) return showValidation('Enter a groundspeed between 1 and 600 knots.');
+  if (!Number.isFinite(qnh) || qnh < 900 || qnh > 1100) return showValidation('Enter a QNH between 900 and 1,100 hPa.');
+  if (!Number.isFinite(ias) || ias <= 0 || ias > 600) return showValidation('Enter an IAS between 1 and 600 knots.');
+  if (!Number.isFinite(headwind) || headwind < -200 || headwind > 200) return showValidation('Enter a headwind/tailwind component between 0 and 200 knots.');
+  if (!Number.isFinite(angleDeg) || angleDeg < 2.8 || angleDeg > 3.5) return showValidation('Select a glide slope angle between 2.8° and 3.5°.');
   if (!rows.length) return showValidation('Switch on at least one altitude entry. Active FAF and DA/MDA rows are required for the final-segment analysis.');
   if (rows.some(r => !r.altitudeValue || !Number.isFinite(r.altitude))) return showValidation('Enter a published altitude for every active row.');
   if (rows.some(r => r.altitude < elevation)) return showValidation('Each active procedure altitude must be at or above the airport elevation.');
@@ -233,16 +251,28 @@ function calculate() {
   if (publishedDrop <= 0) return showValidation('The FAF altitude must be higher than the DA/MDA altitude.');
   const trueDrop = faf.trueUncorrected - map.trueUncorrected;
   if (trueDrop <= 0) return showValidation('The calculated cold true height at FAF must be higher than at DA/MDA.');
-  const segmentDistanceFt = publishedDrop / STANDARD_GRADIENT;
+  // Groundspeed is derived, not entered — same model as the Hot page:
+  // TAS = IAS / sqrt(density ratio), density ratio from station pressure and
+  // actual OAT; GS = TAS − headwind component (tailwind is negative headwind).
+  // Station pressure comes from the local QNH entered on this page.
+  const elevM = elevation * 0.3048;
+  const pressureRatio = (qnh / 1013.25) * Math.pow(1 - 0.0065 * elevM / 288.15, 5.25588);
+  const sigma = pressureRatio * (288.15 / (temp + 273.15));
+  const tas = ias / Math.sqrt(sigma);
+  const groundspeed = tas - headwind;
+  if (!Number.isFinite(groundspeed) || groundspeed <= 0) return showValidation('The calculated groundspeed is not positive — check IAS and headwind component.');
+  const gradient = Math.tan(angleDeg * Math.PI / 180);
+  const segmentDistanceFt = publishedDrop / gradient;
   const actualGradient = trueDrop / segmentDistanceFt;
-  const standardAngle = Math.atan(STANDARD_GRADIENT) * 180 / Math.PI;
+  const standardAngle = angleDeg;
   const actualAngle = Math.atan(actualGradient) * 180 / Math.PI;
-  const standardVs = groundspeed * FEET_PER_MINUTE_PER_KNOT * STANDARD_GRADIENT;
+  const standardVs = groundspeed * FEET_PER_MINUTE_PER_KNOT * gradient;
   const actualVs = groundspeed * FEET_PER_MINUTE_PER_KNOT * actualGradient;
   const layerScale = trueDrop / publishedDrop;
   const indicatedVs = actualVs / layerScale;
   const samePathIndicatedVs = standardVs / layerScale;
-  lastResults = { temp, elevation, groundspeed, computed, faf, map, publishedDrop, trueDrop, segmentDistanceFt, actualGradient, standardAngle, actualAngle, standardVs, actualVs, layerScale, indicatedVs, samePathIndicatedVs };
+  const windPhrase = headwind >= 0 ? `headwind ${Math.round(headwind)} kt` : `tailwind ${Math.round(-headwind)} kt`;
+  lastResults = { temp, elevation, qnh, ias, tas, headwind, windPhrase, angleDeg, gradient, groundspeed, computed, faf, map, publishedDrop, trueDrop, segmentDistanceFt, actualGradient, standardAngle, actualAngle, standardVs, actualVs, layerScale, indicatedVs, samePathIndicatedVs };
   renderResults(lastResults);
 }
 
@@ -252,7 +282,7 @@ function renderResults(data) {
   $('actualGradient').textContent = `${data.actualAngle.toFixed(2)}°`;
   $('shallowerBy').textContent = `${data.actualAngle.toFixed(2)}° · ${(data.standardAngle - data.actualAngle).toFixed(2)}° shallower`;
   $('standardVs').textContent = `${Math.round(data.standardVs)} fpm`;
-  $('standardVsNote').textContent = `5.2% at ${Math.round(data.groundspeed)} kt`;
+  $('standardVsNote').textContent = `${data.angleDeg.toFixed(1)}° at ${Math.round(data.groundspeed)} kt GS (IAS ${Math.round(data.ias)} kt, ${data.windPhrase})`;
   $('actualVs').textContent = `${Math.round(data.actualVs)} fpm`;
   $('actualVsNote').textContent = `true geometric · ${Math.round(data.standardVs - data.actualVs)} fpm lower`;
   $('indicatedVs').textContent = `${Math.round(data.indicatedVs)} fpm`;
@@ -260,8 +290,8 @@ function renderResults(data) {
   $('samePathIndicatedVs').textContent = `${Math.round(data.samePathIndicatedVs)} fpm indicated`;
   $('resultsBody').innerHTML = data.computed.map(r => `<tr><td>${escapeHtml(displayPointLabel(r.label))}</td><td>${formatFt(r.altitude)}</td><td>+${Math.round(r.correction)} ft</td><td><strong>${formatCorrectedAltitude(r)}</strong></td></tr>`).join('');
   const extrapolated = data.computed.some(r => r.height > 5000);
-  $('methodNote').innerHTML = `<strong>Calculation note:</strong> Switched-off rows are excluded entirely from validation, calculations, output, and FAF–DA/MDA analysis. Values are interpolated from the FAA/ICAO table and shown to the nearest foot. ${extrapolated ? 'One or more points exceed 5,000 ft AAE; those values use a linear extension of the final table interval, which the FAA permits as an optional extrapolation method. ' : ''}The VSI estimate uses a table-derived average FAF–DA/MDA layer factor of ${data.layerScale.toFixed(4)}. Exact aircraft indication can differ because of the real temperature/virtual-temperature profile, static-system and ADC calibration, instrument lag, and local pressure structure. Operational guidance always takes precedence.`;
-  $('chartNarrative').textContent = `From FAF to DA/MDA at ${data.temp} degrees Celsius, the cold true descent gradient is ${(data.actualGradient*100).toFixed(2)} percent or ${data.actualAngle.toFixed(2)} degrees. At ${data.groundspeed} knots, standard vertical speed is ${Math.round(data.standardVs)} feet per minute, cold geometric vertical speed is ${Math.round(data.actualVs)} feet per minute, and the pressure-derived cockpit VSI indication is ${Math.round(data.indicatedVs)} feet per minute.`;
+  $('methodNote').innerHTML = `<strong>Calculation note:</strong> Switched-off rows are excluded entirely from validation, calculations, output, and FAF–DA/MDA analysis. Values are interpolated from the FAA/ICAO table and shown to the nearest foot. ${extrapolated ? 'One or more points exceed 5,000 ft AAE; those values use a linear extension of the final table interval, which the FAA permits as an optional extrapolation method. ' : ''}Groundspeed is derived, not entered: TAS ${Math.round(data.tas)} kt is IAS ${Math.round(data.ias)} kt corrected for density ratio at the airport (station pressure from QNH ${Math.round(data.qnh)} hPa and elevation, and OAT ${data.temp}°C), then GS ${Math.round(data.groundspeed)} kt = TAS − ${data.windPhrase}. The nominal profile uses the selected ${data.angleDeg.toFixed(1)}° glide slope angle (${(data.gradient * 100).toFixed(2)}% gradient). The VSI estimate uses a table-derived average FAF–DA/MDA layer factor of ${data.layerScale.toFixed(4)}. Exact aircraft indication can differ because of the real temperature/virtual-temperature profile, static-system and ADC calibration, instrument lag, and local pressure structure. Operational guidance always takes precedence.`;
+  $('chartNarrative').textContent = `From FAF to DA/MDA at ${data.temp} degrees Celsius, the cold true descent gradient is ${(data.actualGradient*100).toFixed(2)} percent or ${data.actualAngle.toFixed(2)} degrees. At IAS ${Math.round(data.ias)} knots, TAS ${Math.round(data.tas)} knots, ${data.windPhrase} (groundspeed ${Math.round(data.groundspeed)} knots) on a ${data.angleDeg.toFixed(1)} degree glide slope, standard vertical speed is ${Math.round(data.standardVs)} feet per minute, cold geometric vertical speed is ${Math.round(data.actualVs)} feet per minute, and the pressure-derived cockpit VSI indication is ${Math.round(data.indicatedVs)} feet per minute.`;
   requestAnimationFrame(() => drawChart(data));
   if (window.innerWidth >= 641 && window.innerWidth < 1000) $('results').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
@@ -317,7 +347,7 @@ function drawChart(data) {
   const standardColor = dayTheme ? '#587000' : '#d8ff4f';
   const coldColor = dayTheme ? '#087fa8' : '#67d8ff';
   path(standardColor,false,[]); path(coldColor,true,[6,4]);
-  ctx.fillStyle=standardColor; ctx.textAlign='right'; ctx.fillText(`${(STANDARD_GRADIENT*100).toFixed(1)}% / ${data.standardAngle.toFixed(2)}° standard`,w-pad.r-8,pad.t+13);
+  ctx.fillStyle=standardColor; ctx.textAlign='right'; ctx.fillText(`${(data.gradient*100).toFixed(1)}% / ${data.standardAngle.toFixed(2)}° standard`,w-pad.r-8,pad.t+13);
   ctx.fillStyle=coldColor; ctx.textAlign='left'; ctx.fillText(`${(data.actualGradient*100).toFixed(2)}% / ${data.actualAngle.toFixed(2)}° cold`,pad.l+8,h-pad.b-8);
 }
 
@@ -480,10 +510,10 @@ $('temperature').addEventListener('input', event => {
   if (Number.isFinite(value) && value > 0) event.currentTarget.value = String(-value);
 });
 $('loadExample').addEventListener('click', () => {
-  $('temperature').value = -20; $('elevation').value = 1200; $('groundspeed').value = 120; rowsEl.innerHTML=''; exampleRows.forEach(([l,a])=>addAltitudeRow(l,a)); clearValidation();
+  $('temperature').value = -20; $('elevation').value = 1200; $('coldQnh').value = 1013; $('coldIas').value = 135; $('coldHeadwind').value = 10; $('coldAngle').value = '3.0'; coldHeadwindTailwind = false; syncColdHeadwindSign(); rowsEl.innerHTML=''; exampleRows.forEach(([l,a])=>addAltitudeRow(l,a)); clearValidation();
 });
 $('clearCold').addEventListener('click', () => {
-  $('temperature').value = ''; $('elevation').value = ''; $('groundspeed').value = '';
+  $('temperature').value = ''; $('elevation').value = ''; $('coldQnh').value = 1013; $('coldIas').value = ''; $('coldHeadwind').value = ''; $('coldAngle').value = '3.0'; coldHeadwindTailwind = false; syncColdHeadwindSign();
   rowsEl.innerHTML=''; initialRows.forEach(([l,a])=>addAltitudeRow(l,a));
   clearValidation(); lastResults = null; $('emptyState').hidden = false; $('results').hidden = true;
 });

@@ -83,15 +83,49 @@
             <small>Elevation of altimeter source</small>
           </label>
           <label class="field">
-            <span>Groundspeed</span>
+            <span>QNH</span>
+            <div class="input-shell">
+              <input id="coldQnh" type="number" inputmode="decimal" min="900" max="1100" step="1" value="1013" placeholder="—">
+              <b>hPa</b>
+            </div>
+            <small>Local sea-level pressure. Affects air density and therefore TAS.</small>
+          </label>
+          <label class="field">
+            <span>Indicated airspeed</span>
             <div class="input-shell mandatory-shell">
-              <input id="groundspeed" type="number" inputmode="decimal" min="1" max="600" step="1" placeholder="—">
+              <input id="coldIas" type="number" inputmode="decimal" min="1" max="600" step="1" placeholder="—">
               <b>kt</b>
             </div>
-            <small>FAF to DA/MDA groundspeed</small>
+            <small>IAS on the final segment</small>
+          </label>
+          <label class="field">
+            <span>Headwind component</span>
+            <div class="input-shell mandatory-shell">
+              <button id="coldHeadwindSign" class="sign-toggle" type="button" aria-pressed="false" aria-label="Toggle headwind or tailwind">HW</button>
+              <input id="coldHeadwind" type="number" inputmode="decimal" min="0" max="200" step="1" placeholder="—">
+              <b>kt</b>
+            </div>
+            <small>Tap HW/TW to switch between headwind and tailwind</small>
+          </label>
+          <label class="field">
+            <span>Glide slope angle</span>
+            <div class="input-shell">
+              <select id="coldAngle" aria-label="Glide slope angle in degrees">
+                <option value="2.8">2.8</option>
+                <option value="2.9">2.9</option>
+                <option value="3.0" selected>3.0</option>
+                <option value="3.1">3.1</option>
+                <option value="3.2">3.2</option>
+                <option value="3.3">3.3</option>
+                <option value="3.4">3.4</option>
+                <option value="3.5">3.5</option>
+              </select>
+              <b>°</b>
+            </div>
+            <small>Default 3.0°, in 0.1° steps</small>
           </label>
         </div>
-        <p class="mandatory-note">Amber boxes are required: temperature, elevation, groundspeed, plus one FAF row and one DA/MDA row.</p>
+        <p class="mandatory-note">Amber boxes are required: temperature, elevation, IAS, headwind, plus one FAF row and one DA/MDA row.</p>
 
         <div class="altitude-heading">
           <div>
@@ -146,9 +180,9 @@
           </section>
 
           <div class="vsi-explainer">
-            <span>Same physical 5.2% path in cold air</span>
+            <span>Same physical path in cold air</span>
             <strong id="samePathIndicatedVs">—</strong>
-            <p>Estimated pressure-derived VSI indication if the aircraft maintained the full geometric 5.2% path instead of following the shallower uncompensated barometric path.</p>
+            <p>Estimated pressure-derived VSI indication if the aircraft maintained the full geometric path instead of following the shallower uncompensated barometric path.</p>
           </div>
 
           <div class="summary-grid">
@@ -178,7 +212,7 @@
             <div class="chart-title">
               <div>
                 <h3>FAF → DA/MDA descent comparison</h3>
-                <p>Standard 5.2% profile vs. cold true profile</p>
+                <p>Standard profile vs. cold true profile</p>
               </div>
               <div class="legend" aria-label="Chart legend">
                 <span><i class="standard"></i> ISA 3°</span>
@@ -336,7 +370,7 @@
       </div>
       <div class="method-copy">
         <p>The calculator bilinearly interpolates the FAA-published ICAO Cold Temperature Error Table using reported airport temperature and height above airport. Corrections are added to published altitudes; the altimeter setting itself is not changed.</p>
-        <p>The final descent comparison uses only rows labeled FAF and DA/MDA (or MAP). It derives the nominal distance from their published altitude difference at a 5.2% gradient, then compares that with their cold true-height difference.</p>
+        <p>The final descent comparison uses only rows labeled FAF and DA/MDA (or MAP). It derives the nominal distance from their published altitude difference at the selected glide slope angle, then compares that with their cold true-height difference. Groundspeed is not entered: it is derived from IAS, the headwind/tailwind component, and air density at the airport, using the local QNH.</p>
         <p>A VSI is a pressure-rate instrument. For the displayed cold indication, the app converts geometric vertical speed back to barometric vertical speed using the FAF–DA/MDA layer-thickness ratio from the same cold-correction table. This distinguishes the shallower true path from what the cockpit VSI indicates.</p>
         <p>FAA procedures, applicable state rules, operator policy, chart notes, and ATC instructions always take precedence. Coordinate corrections with ATC where required. Baro-VNAV temperature limits are separate.</p>
         <div class="source-links">
@@ -349,9 +383,9 @@
 
   <footer>
     <span>Temperature &amp; Descent Calculator</span>
-    <span>Version 1.1.1 · Works offline after first successful load</span>
+    <span>Version 1.2 · Works offline after first successful load</span>
   </footer>
 
-  <script src="app.js?v=1.1.1" defer></script>
+  <script src="app.js?v=1.2" defer></script>
 </body>
 </html>
