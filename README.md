@@ -1,6 +1,6 @@
 # Temperature & Descent Calculator — 温度与下降计算器
 
-**Version 1.2 · Live apps:** [rack.228311.xyz:49173](https://rack.228311.xyz:49173/) · [tool.228311.xyz:49173](https://tool.228311.xyz:49173/)
+**Version 1.2.1 · Live apps:** [rack.228311.xyz:49173](https://rack.228311.xyz:49173/) · [tool.228311.xyz:49173](https://tool.228311.xyz:49173/)
 
 > [!CAUTION]
 > This is a planning and educational tool, not approved navigation equipment. Always follow the current procedure, applicable authority guidance, aircraft and operator limitations, chart notes, and ATC instructions. Independently verify every operational value before use.
@@ -19,7 +19,7 @@ The app has two modes, switched at the top of the page: **Cold correction** (低
 
 - **低温模式**：输入机场温度、机场标高、当地 QNH、指示空速、顶风/顺风分量、下滑角和程序各点的发布高度，按 FAA/ICAO 低温修正表计算应加的高度修正，并比较 FAF 至 DA/MDA 之间所选下滑角的标称下降剖面与低温条件下实际几何下降剖面的差异。地速不再输入，由 IAS、QNH 和风算出。
 - **高温模式**：不做高度修正。输入外界气温、机场标高、当地 QNH、指示空速、顶风分量和下滑角，输出在几何下滑道和无气压式垂直导航（baro-VNAV）的 FMC 下滑道上各自的指示垂直速度，并给出地速、真空速、真下降率和真下滑角。
-- 两个模式都有 **Load example（加载示例）**和 **Clear data（清除数据）**：清除后可立即开始下一次计算，低温页恢复为空的初始高度行，高温页将 QNH 恢复为 1013 hPa、下滑角恢复为 3.0°。
+- 两个模式都有 **Load example（加载示例）**和 **Reset（重置）**：重置后可立即开始下一次计算，低温页恢复为空的初始高度行，高温页将 QNH 恢复为 1013 hPa、下滑角恢复为 3.0°。
 
 ### 低温模式：功能与使用
 
@@ -73,7 +73,7 @@ python3 -m http.server 4173 --directory dist
 
 - **Cold correction:** enter airport temperature, airport elevation, local QNH, IAS, headwind/tailwind component, glide slope angle, and published procedure altitudes. The app interpolates the FAA/ICAO cold-temperature error table, gives the correction and corrected indicated altitude for each active point, and compares the nominal FAF-to-DA/MDA profile at the selected glide slope angle with the shallower geometric path that results when uncompensated barometric altitudes are flown in cold air. Groundspeed is derived from IAS, QNH, and wind, not entered.
 - **Hot VSI:** no altitude correction is applied. Enter OAT, airport elevation, local QNH, IAS, headwind component, and glide slope angle. The app outputs the indicated vertical speed on a geometrical glide path and on the FMC-calculated path without baro-VNAV, plus groundspeed, TAS, true rate, and true angle.
-- Both pages have **Load example** and **Clear data**: clearing starts a fresh calculation immediately — the Cold page resets to empty initial altitude rows, the Hot page resets QNH to 1013 hPa and the angle to 3.0°.
+- Both pages have **Load example** and **Reset**: resetting starts a fresh calculation immediately — the Cold page resets to empty initial altitude rows, the Hot page resets QNH to 1013 hPa and the angle to 3.0°.
 
 ### Cold mode: features and use
 

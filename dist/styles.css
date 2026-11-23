@@ -96,7 +96,7 @@ h1 em { color: var(--ice); font-style: normal; font-weight: 400; }
 .panel-heading h2, .altitude-heading h2 { font-size: 21px; letter-spacing: -.025em; margin: 0; }
 .step { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 50%; border: 1px solid currentColor; font-size: 10px; opacity: .62; }
 .text-button, .icon-button { border: 0; background: transparent; color: inherit; }
-.text-button { border-bottom: 1px solid currentColor; padding: 4px 0; font-size: 12px; font-weight: 700; opacity: .8; }
+.text-button { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; background: transparent; color: inherit; }
 .conditions-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 28px 0 42px; border-bottom: 1px solid var(--form-line); }
 .field > span { display: block; font-size: 12px; font-weight: 750; margin-bottom: 9px; }
 .field small { color: var(--form-muted); display: block; font-size: 10px; margin-top: 7px; }
@@ -260,7 +260,7 @@ html[data-theme="day"] .mandatory-note { color: #8a6400; }
   .panel-heading h2, .altitude-heading h2 { font-size: 16px; }
   .step { width: 23px; height: 23px; font-size: 8px; }
   .panel-heading > div, .altitude-heading > div { gap: 7px; }
-  .text-button { font-size: 10px; }
+  .text-button { font-size: 11px; padding: 5px 10px; }
   .conditions-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; padding: 7px 0 8px; }
   .field > span { margin-bottom: 4px; font-size: 9px; white-space: nowrap; }
   .field small { display: none; }
@@ -337,7 +337,7 @@ html[data-theme="day"] .mandatory-note { color: #8a6400; }
   html[data-preview="phone"] .panel-heading h2, html[data-preview="phone"] .altitude-heading h2 { font-size: 16px; }
   html[data-preview="phone"] .step { width: 23px; height: 23px; font-size: 8px; }
   html[data-preview="phone"] .panel-heading > div, html[data-preview="phone"] .altitude-heading > div { gap: 7px; }
-  html[data-preview="phone"] .text-button { font-size: 10px; }
+  html[data-preview="phone"] .text-button { font-size: 11px; padding: 5px 10px; }
   html[data-preview="phone"] .conditions-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; padding: 7px 0 8px; }
   html[data-preview="phone"] .field > span { margin-bottom: 4px; font-size: 9px; white-space: nowrap; }
   html[data-preview="phone"] .field small, html[data-preview="phone"] .segment-hint, html[data-preview="phone"] .column-labels { display: none; }
