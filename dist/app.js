@@ -552,6 +552,11 @@ setupOffline();
 /* reload can keep showing the old cached copy. This button explicitly asks the browser */
 /* for a new service worker and only reloads when one has taken over. It never clears the */
 /* offline cache when you are offline or already up to date, so it cannot break offline use. */
+/* The 2.5s/4s blind reload timers are gone (v1.3.1): they could fire while the old worker */
+/* still controlled the page and the old cache was not yet deleted, so the reload served the */
+/* old page. Now the reload happens only on controllerchange (the new worker really took */
+/* over); the long timeouts below only verify that takeover and otherwise report a stall */
+/* instead of reloading a stale page. */
 let updateReloading = false;
 async function checkForUpdate() {
   const status = $('offlineStatus');
@@ -570,9 +575,15 @@ async function checkForUpdate() {
     status.disabled = false;
     setTimeout(() => { label.textContent = navigator.onLine ? 'Offline ready' : 'Running offline'; }, 2500);
   };
+  const failUpdate = (message) => {
+    label.textContent = message;
+    status.disabled = false;
+    setTimeout(() => { label.textContent = navigator.onLine ? 'Offline ready' : 'Running offline'; }, 3000);
+  };
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (!reg) { window.location.reload(); return; }
+    const oldController = navigator.serviceWorker.controller;
     // Listen first, so we catch the new worker taking over even if it activates immediately.
     const onControllerChange = () => {
       if (updateReloading) return;
@@ -580,23 +591,37 @@ async function checkForUpdate() {
       window.location.reload();
     };
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+    // Safety net: if takeover has not happened after a generous wait, check whether the
+    // controller actually changed. Reload only then; otherwise report the stall and let
+    // the user tap Update again instead of showing the old version as if it were new.
+    const armTakeoverWatch = (ms, stalledMessage) => setTimeout(() => {
+      if (updateReloading) return;
+      if (navigator.serviceWorker.controller && navigator.serviceWorker.controller !== oldController) {
+        updateReloading = true;
+        window.location.reload();
+      } else {
+        navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+        failUpdate(stalledMessage);
+      }
+    }, ms);
     await reg.update();
     if (reg.waiting) {
       label.textContent = 'Updating…';
       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      // Fallback if controllerchange does not fire (e.g. first activation edge case).
-      setTimeout(() => { if (!updateReloading) { updateReloading = true; window.location.reload(); } }, 2500);
+      armTakeoverWatch(15000, 'Update stalled — tap again');
       return;
     }
     if (reg.installing) {
       label.textContent = 'Updating…';
-      reg.installing.addEventListener('statechange', () => {
-        if (reg.installing && reg.installing.state === 'activated' && !updateReloading) {
-          updateReloading = true;
-          window.location.reload();
+      const worker = reg.installing;
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'redundant') {
+          navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+          failUpdate('Update failed — try again');
         }
+        // 'activated' is handled by controllerchange; no reload here.
       });
-      setTimeout(() => { if (!updateReloading) { updateReloading = true; window.location.reload(); } }, 4000);
+      armTakeoverWatch(30000, 'Update is taking long — tap again');
       return;
     }
     // No new worker: the service-worker file is unchanged, so this is the latest version.

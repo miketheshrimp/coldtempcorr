@@ -1,6 +1,6 @@
 # Temperature & Descent Calculator — 温度与下降计算器
 
-**Version 1.3 · Live apps:** [rack.228311.xyz:49173](https://rack.228311.xyz:49173/) · [tool.228311.xyz:49173](https://tool.228311.xyz:49173/)
+**Version 1.3.1 · Live apps:** [rack.228311.xyz:49173](https://rack.228311.xyz:49173/) · [tool.228311.xyz:49173](https://tool.228311.xyz:49173/)
 
 > [!CAUTION]
 > This is a planning and educational tool, not approved navigation equipment. Always follow the current procedure, applicable authority guidance, aircraft and operator limitations, chart notes, and ATC instructions. Independently verify every operational value before use.
