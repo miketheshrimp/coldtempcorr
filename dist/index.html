@@ -99,13 +99,20 @@
             <small>IAS on the final segment</small>
           </label>
           <label class="field">
-            <span>Headwind component</span>
+            <span>Wind angle to runway</span>
             <div class="input-shell mandatory-shell">
-              <button id="coldHeadwindSign" class="sign-toggle" type="button" aria-pressed="false" aria-label="Toggle headwind or tailwind">HW</button>
-              <input id="coldHeadwind" type="number" inputmode="decimal" min="0" max="200" step="1" placeholder="—">
+              <input id="coldWindAngle" type="number" inputmode="decimal" min="0" max="180" step="1" placeholder="—">
+              <b>°</b>
+            </div>
+            <small>Angle between wind and runway: 0° = headwind, 90° = crosswind, 180° = tailwind</small>
+          </label>
+          <label class="field">
+            <span>Wind speed</span>
+            <div class="input-shell mandatory-shell">
+              <input id="coldWindSpeed" type="number" inputmode="decimal" min="0" max="200" step="1" placeholder="—">
               <b>kt</b>
             </div>
-            <small>Tap HW/TW to switch between headwind and tailwind</small>
+            <small>Headwind component is calculated: speed × cos(angle)</small>
           </label>
           <label class="field">
             <span>Glide slope angle</span>
@@ -125,7 +132,7 @@
             <small>Default 3.0°, in 0.1° steps</small>
           </label>
         </div>
-        <p class="mandatory-note">Amber boxes are required: temperature, elevation, IAS, headwind, plus one FAF row and one DA/MDA row.</p>
+        <p class="mandatory-note">Amber boxes are required: temperature, elevation, IAS, wind angle and speed, plus one FAF row and one DA/MDA row.</p>
 
         <div class="altitude-heading">
           <div>
@@ -276,13 +283,20 @@
             <small>IAS on the final segment</small>
           </label>
           <label class="field">
-            <span>Headwind component</span>
+            <span>Wind angle to runway</span>
             <div class="input-shell">
-              <button id="hotHeadwindSign" class="sign-toggle" type="button" aria-pressed="false" aria-label="Toggle headwind or tailwind">HW</button>
-              <input id="hotHeadwind" type="number" inputmode="decimal" min="0" max="200" step="1" placeholder="—">
+              <input id="hotWindAngle" type="number" inputmode="decimal" min="0" max="180" step="1" placeholder="—">
+              <b>°</b>
+            </div>
+            <small>Angle between wind and runway: 0° = headwind, 90° = crosswind, 180° = tailwind</small>
+          </label>
+          <label class="field">
+            <span>Wind speed</span>
+            <div class="input-shell">
+              <input id="hotWindSpeed" type="number" inputmode="decimal" min="0" max="200" step="1" placeholder="—">
               <b>kt</b>
             </div>
-            <small>Tap HW/TW to switch between headwind and tailwind. Groundspeed is calculated, not entered.</small>
+            <small>Headwind component is calculated: speed × cos(angle). Groundspeed is calculated, not entered.</small>
           </label>
           <label class="field">
             <span>Glide slope angle</span>
